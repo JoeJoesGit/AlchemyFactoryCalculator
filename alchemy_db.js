@@ -10,7 +10,7 @@ window.ALCHEMY_DB = {
         "Meteorite": { "category": "Raw Materials" },
         "Rock Salt": { "category": "Raw Materials" },
         "Volcanic Ash": { "category": "Raw Materials" },
-        "Gloom Fungus": { "category": "Raw Materials" }, // Assumed raw/drop for now
+        "Gloom Fungus": { "category": "Raw Materials" },
 
         // --- Seeds ---
         "Flax Seed": { "category": "Seeds", "buyPrice": 280 },
@@ -23,7 +23,7 @@ window.ALCHEMY_DB = {
         // --- Herbs ---
         "Flax": { "category": "Herbs", "nutrientCost": 24 },
         "Sage": { "category": "Herbs", "nutrientCost": 36 },
-        "Red Currant": { "category": "Herbs", "nutrientCost": 144 },
+        "Red Currant": { "category": "Herbs", "nutrientCost": 144 }, // 1 Basic Fert per item
         "Lavender": { "category": "Herbs" },
         "Gentian": { "category": "Herbs" },
         "Chamomile": { "category": "Herbs" },
@@ -122,9 +122,9 @@ window.ALCHEMY_DB = {
         "Simple Potion": { "category": "Potions" },
         "Oblivion Essence": { "category": "Potions" },
         "Vitality Essence": { "category": "Potions" },
-        "Vitality Potion": { "category": "Potions" },
+        "Vitality Potion": { "category": "Potions", "sellPrice": 330 },
         "Transformation Potion": { "category": "Potions" },
-        "Growth Potion": { "category": "Fertilizer", "nutrientValue": 6480, "maxFertility": 2160 }, // Also acts as fert
+        "Growth Potion": { "category": "Fertilizer", "nutrientValue": 6480, "maxFertility": 2160 }, 
 
         // --- Catalysts ---
         "Fertile Catalyst": { "category": "Fertilizer", "nutrientValue": 24000, "maxFertility": 6000 },
@@ -137,13 +137,13 @@ window.ALCHEMY_DB = {
         "Advanced Fertilizer": { "category": "Fertilizer", "nutrientValue": 720, "maxFertility": 144 },
 
         // --- Liquids ---
-        "Linseed Oil": { "category": "Liquid" },
-        "Fruit Wine": { "category": "Liquid" },
-        "Limewater": { "category": "Liquid" },
-        "Brandy": { "category": "Liquid" },
-        "Aqua Vitae": { "category": "Liquid" },
-        "Sulfuric Acid": { "category": "Liquid" },
-        "Lavender Essential Oil": { "category": "Liquid" },
+        "Linseed Oil": { "category": "Liquid", "liquid": true },
+        "Fruit Wine": { "category": "Liquid", "buyPrice": 5, "liquid": true },
+        "Limewater": { "category": "Liquid", "liquid": true },
+        "Brandy": { "category": "Liquid", "liquid": true },
+        "Aqua Vitae": { "category": "Liquid", "liquid": true },
+        "Sulfuric Acid": { "category": "Liquid", "liquid": true },
+        "Lavender Essential Oil": { "category": "Liquid", "liquid": true },
 
         // --- Relics ---
         "Jupiter": { "category": "Relic" },
@@ -174,10 +174,10 @@ window.ALCHEMY_DB = {
         "Assembler": { "heatCost": 0 },
         "Advanced Assembler": { "heatCost": 0 },
         "Processor": { "heatCost": 0 },
-        "Nursery": { "heatCost": 0 }, 
+        "Nursery": { "heatCost": 0, "fertility": true }, 
         "Seed Plot": { "heatCost": 0 },
         "Extractor": { "heatCost": 0 },
-        "Blender": { "heatCost": 0 },
+        "Blender": { "heatCost": 5.0, "parent": "Stone Furnace", "slotsRequired": 1 },
         "Advanced Blender": { "heatCost": 0 },
         "Refiner": { "heatCost": 0 },
         "Cauldron": { "heatCost": 0 },
@@ -253,11 +253,12 @@ window.ALCHEMY_DB = {
         { "id": "pocket_watch", "outputs": { "Pocket Watch": 1 }, "inputs": { "Steel Gear": 2, "Copper Bearing": 2, "Glass": 6 }, "machine": "Advanced Assembler", "baseTime": 12.0 },
         { "id": "silver_amulet", "outputs": { "Silver Amulet": 1 }, "inputs": { "Silver Ingot": 2, "Lapis Lazuli": 1 }, "machine": "Assembler", "baseTime": 10.0 },
 
-        // --- GOODS ---
+        // --- GOODS & POTIONS ---
         { "id": "brick", "outputs": { "Brick": 1 }, "inputs": { "Clay": 1 }, "machine": "Kiln", "baseTime": 6.0 },
         { "id": "glass", "outputs": { "Glass": 1 }, "inputs": { "Sand": 6 }, "machine": "Kiln", "baseTime": 6.0 },
         { "id": "soap", "outputs": { "Soap": 1 }, "inputs": { "Plant Ash": 3, "Linseed Oil": 200 }, "machine": "Blender", "baseTime": 3.0 },
         { "id": "healing_potion", "outputs": { "Healing Potion": 1 }, "inputs": { "Sage Powder": 6, "Flax Fiber": 6 }, "machine": "Assembler", "baseTime": 6.0 },
+        { "id": "vitality_potion", "outputs": { "Vitality Potion": 1 }, "inputs": { "Quicklime Powder": 4, "Fruit Wine": 80 }, "machine": "Blender", "baseTime": 8.0 },
         { "id": "bandage", "outputs": { "Bandage": 1 }, "inputs": { "Linen": 2, "Healing Potion": 2 }, "machine": "Assembler", "baseTime": 10.0 },
         { "id": "blast_potion", "outputs": { "Blast Potion": 1 }, "inputs": { "Oblivion Essence": 1, "Black Powder": 2, "Brandy": 40 }, "machine": "Advanced Blender", "baseTime": 6.0 },
         { "id": "panacea_potion", "outputs": { "Panacea Potion": 1 }, "inputs": { "Fertile Catalyst": 3, "Blast Potion": 3, "Aqua Vitae": 12 }, "machine": "Advanced Blender", "baseTime": 6.0 },
@@ -290,7 +291,7 @@ window.ALCHEMY_DB = {
         "alchemyLevel": 0,
         "fuelLevel": 0,
         "fertLevel": 0,
-		"defaultFuel": "Plank",
+        "defaultFuel": "Plank",
         "defaultFert": "Basic Fertilizer"
     }
 };
