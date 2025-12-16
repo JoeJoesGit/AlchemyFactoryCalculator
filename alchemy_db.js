@@ -328,6 +328,18 @@ window.ALCHEMY_DB = {
             "inputs": { "Charcoal Powder": 2, "Quicklime Powder": 4 }, "outputs": { "Salt": 1 }, 
             "baseTime": 6.0, "probability": 0.333333, "failures": [{ "item": "Sand", "qty": 6 }]
         },
+        // --- NEW: SAND RECIPE (Mirror of Salt) ---
+        { 
+            "id": "Sand_Athanor", "machine": "Athanor", 
+            "inputs": { "Charcoal Powder": 2, "Quicklime Powder": 4 }, "outputs": { "Sand": 6 }, 
+            "baseTime": 6.0, "probability": 0.666666, "failures": [{ "item": "Salt", "qty": 1 }]
+        },
+        // --- NEW: ROCK SALT (Updated) ---
+        { 
+            "id": "Salt_Rock", "machine": "Stone Crusher", 
+            "inputs": { "Rock Salt": 1 }, "outputs": { "Salt": 100, "Sand": 100 }, 
+            "baseTime": 600.0 
+        },
         { "id": "Salt Water", "machine": "Extractor", "inputs": { "Salt": 1 }, "outputs": { "Salt Water": 20 }, "baseTime": 4.0 },
         { "id": "Lavender Essential Oil", "machine": "Alembic", "inputs": { "Lavender": 3, "Linseed Oil": 300 }, "outputs": { "Lavender Essential Oil": 15 }, "baseTime": 3.0 },
         { "id": "Brandy", "machine": "Alembic", "inputs": { "Coke Powder": 5, "Fruit Wine": 100 }, "outputs": { "Brandy": 40 }, "baseTime": 5.0 },
@@ -408,7 +420,102 @@ window.ALCHEMY_DB = {
         { "id": "Fairy Dust", "machine": "Arcane Processor", "inputs": { "Chamomile Powder": 1, "Gentian Powder": 1, "World Tree Leaf": 1 }, "outputs": { "Fairy Dust": 1 }, "baseTime": 4.0 },
         { "id": "Luna", "machine": "Arcane Shaper", "inputs": { "Steel Ingot": 75, "Bronze Ingot": 75, "Copper Ingot": 75, "Silver Ingot": 75, "Gold Ingot": 75, "Moon Tear": 75 }, "outputs": { "Luna": 1 }, "baseTime": 600.0 },
         { "id": "Mercury", "machine": "Arcane Shaper", "inputs": { "Turquoise": 100, "Malachite": 100, "Topaz": 100, "Obsidian": 100, "Lapis Lazuli": 100, "Quicksilver": 1000 }, "outputs": { "Mercury": 1 }, "baseTime": 600.0 },
-        { "id": "Sol", "machine": "Arcane Shaper", "inputs": { "Jupiter": 1, "Saturn": 1, "Mars": 1, "Venus": 1, "Mercury": 1, "Luna": 1, "Diamond": 25, "Eternal Catalyst": 5, "World Tree Core": 5 }, "outputs": { "Sol": 1 }, "baseTime": 300.0 }
+        { "id": "Sol", "machine": "Arcane Shaper", "inputs": { "Jupiter": 1, "Saturn": 1, "Mars": 1, "Venus": 1, "Mercury": 1, "Luna": 1, "Diamond": 25, "Eternal Catalyst": 5, "World Tree Core": 5 }, "outputs": { "Sol": 1 }, "baseTime": 300.0 },
+
+        // --- 15. ALTERNATE RECIPES ---
+        { 
+            "id": "Coke_Alt", "machine": "Crucible", 
+            "inputs": { "Coal": 1 }, "outputs": { "Coke": 1 }, 
+            "baseTime": 6.0 
+        },
+        { 
+            "id": "CopperPowder2_Alt", "machine": "Athanor", 
+            "inputs": { "Copper Powder": 2 }, "outputs": { "Copper Powder": 1 }, 
+            "baseTime": 6.0 
+        },
+        { 
+            "id": "SilverPowder3_Alt", "machine": "Advanced Athanor", 
+            "inputs": { "Impure Silver Powder": 2 }, "outputs": { "Silver Powder": 1 }, 
+            "baseTime": 8.0 
+        },
+        { 
+            "id": "GoldDust3_Alt", "machine": "Advanced Athanor", 
+            "inputs": { "Impure Gold Dust": 2 }, "outputs": { "Gold Dust": 1 }, 
+            "baseTime": 10.0 
+        },
+        // --- Reverse Crafting (Coins -> Ingots) ---
+        { 
+            "id": "CopperIngot_Alt", "machine": "Crucible", 
+            "inputs": { "Copper Coin": 400 }, "outputs": { "Copper Ingot": 1 }, 
+            "baseTime": 12.0 
+        },
+        { 
+            "id": "SilverIngot_Alt", "machine": "Crucible", 
+            "inputs": { "Silver Coin": 6 }, "outputs": { "Silver Ingot": 1 }, 
+            "baseTime": 16.0 
+        },
+        { 
+            "id": "GoldIngot_Alt", "machine": "Crucible", 
+            "inputs": { "Gold Coin": 3 }, "outputs": { "Gold Ingot": 1 }, 
+            "baseTime": 40.0 
+        },
+        // --- Recycling & Other Alts ---
+        { 
+            "id": "IronIngot_Alt", "machine": "Crucible", 
+            "inputs": { "Iron Sand": 1 }, "outputs": { "Iron Ingot": 1 }, 
+            "baseTime": 6.0 
+        },
+        { 
+            "id": "CopperPowder2_Alt2", "machine": "Grinder", 
+            "inputs": { "Copper Ingot": 1 }, "outputs": { "Copper Powder": 1 }, 
+            "baseTime": 12.0 
+        },
+        { 
+            "id": "SilverPowder3_Alt3", "machine": "Grinder", 
+            "inputs": { "Silver Ingot": 1 }, "outputs": { "Silver Powder": 1 }, 
+            "baseTime": 16.0 
+        },
+        { 
+            "id": "GoldDust5_Alt", "machine": "Grinder", 
+            "inputs": { "Gold Ingot": 1 }, "outputs": { "Gold Dust": 1 }, 
+            "baseTime": 40.0 
+        },
+        { 
+            "id": "Shard1_Alt", "machine": "Stone Crusher", 
+            "inputs": { "Quartz Ore": 1 }, "outputs": { "Crude Shard": 80 }, 
+            "baseTime": 6.0 
+        },
+        { 
+            "id": "Mors_Alt", "machine": "Paradox Crucible", 
+            "inputs": { "Vitality Essence": 1 }, "outputs": { "Oblivion Essence": 1 }, 
+            "baseTime": 5.0 
+        },
+        { 
+            "id": "VolcanicAsh_Alt", "machine": "Grinder", 
+            "inputs": { "Obsidian": 1 }, "outputs": { "Volcanic Ash": 1 }, 
+            "baseTime": 24.0 
+        },
+        // --- End Game Gem Alternates ---
+        { 
+            "id": "PhilosopherStone_Alt", "machine": "Cauldron", 
+            "inputs": { "Ruby": 1, "Sapphire": 1, "Emerald": 1 }, "outputs": { "Philosopher's Stone": 1 }, 
+            "baseTime": 60.0 
+        },
+        { 
+            "id": "Ruby_Alt", "machine": "Cauldron", 
+            "inputs": { "Diamond": 1, "Gold Dust": 1, "Catalyst3": 1 }, "outputs": { "Ruby": 1 }, 
+            "baseTime": 30.9 
+        },
+        { 
+            "id": "Sapphire_Alt", "machine": "Cauldron", 
+            "inputs": { "Perfect Diamond": 1, "World Tree Core": 1, "Fertile Catalyst": 1 }, "outputs": { "Sapphire": 1 }, 
+            "baseTime": 38.2 
+        },
+        { 
+            "id": "Emerald_Alt", "machine": "Cauldron", 
+            "inputs": { "Moonlit Soap": 1, "Lapis Lazuli": 1, "Catalyst2": 1 }, "outputs": { "Emerald": 1 }, 
+            "baseTime": 45.5 
+        }
     ],
 
     "settings": {
