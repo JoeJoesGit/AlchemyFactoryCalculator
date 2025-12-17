@@ -1,5 +1,19 @@
 # Alchemy Factory Planner - Changelog
 
+## v57 - Smart Search
+* **UI Upgrade:** Replaced the "Target Item" dropdown with a **Smart Combobox**.
+    * **Features:** Ghost Text Autofill, Hybrid Sorting (Starts-With priority), and Keyboard Navigation.
+* **Option:** Added **1/3 Belt (~33%)** to the Belt Load preset dropdown.
+* **Code:** Removed ~50 lines of redundant HTML generation logic, resulting in a cleaner, faster file despite the new features.
+
+## v56 - Liquid Logic Fix
+* **Fix:** **Liquid Flow.** Fluid outputs (e.g., Linseed Oil, Water) are no longer restricted by the Belt Speed cap.
+* **Math:** High-volume fluid recipes now correctly calculate machine counts based on production speed alone, rather than artificially inflating the count due to belt bottlenecks.
+
+## v55 - Belt Cap Logic
+* **Logic:** **Belt Bottleneck.** Standard machines producing solid items now respect the current Belt Speed limit.
+* **Math:** If a machine's theoretical output exceeds the belt speed (e.g., 540/m output on a 90/m belt), the calculator now caps the per-machine output at the belt limit and increases the required machine count accordingly.
+
 ## v54 - Logic Repair
 * **Fix:** **Tree Pruning Logic.** Disabled the "Stop Recursion" rule when a node is handled by Self-Fuel/Self-Fert. 
     * *Impact:* Ingredient sub-chains (e.g., Sage for Basic Fertilizer) are now fully calculated and visible, ensuring the "Internal Module" at the bottom receives the correct demand load.
