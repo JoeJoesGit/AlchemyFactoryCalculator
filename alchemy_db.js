@@ -2,7 +2,7 @@ window.ALCHEMY_DB = {
     "version": 18, 
     "items": {
         // --- 1. RAW RESOURCES ---
-        "Logs": { "category": "Raw Materials", "buyPrice": 200, "heat": 10 },
+        "Logs": { "category": "Raw Materials", "buyPrice": 200, "heat": 2000 },
         "Limestone": { "category": "Raw Materials", "buyPrice": 600 },
         "Iron Ore": { "category": "Raw Materials", "buyPrice": 1200 },
         "Coal Ore": { "category": "Raw Materials", "buyPrice": 4800, "heat": 250 },
