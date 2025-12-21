@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alchemy Factory Planner v81</title>
+    <title>Alchemy Factory Planner v84</title>
     <script src="alchemy_db.js"></script> 
     
     <style>
@@ -210,7 +210,7 @@
             <h1>Alchemy Factory Planner</h1>
             <span style="margin-left: 20px;">
                 <a href="https://github.com/JoeJoesGit/AlchemyFactoryCalculator" target="_blank" class="repo-link">GitHub Repo</a>
-                <span class="subtitle" onclick="showChangelog()">v81 | View Changelog</span>
+                <span class="subtitle" onclick="showChangelog()">v84 | View Changelog</span>
             </span>
         </div>
         <div class="tabs">
@@ -224,10 +224,10 @@
             <div class="modal-content">
                 <div class="modal-header"><h2>Changelog</h2><button class="close-modal" onclick="closeModal('changelog-modal')">&times;</button></div>
                 <div style="line-height:1.6; color:#ccc;">
-                    <strong>v81 - Stabilization Regression Fix</strong><br>
-                    - <strong>Bug Fix:</strong> Fixed a regression where Internal Modules stopped reporting their heat/nutrient needs during the calculation loop. The Fuel Module will now correctly start up if the Fertilizer Module needs heat.<br><br>
-                    <strong>v80 - Math Precision Fix</strong><br>
-                    - <strong>Core Math:</strong> Implemented floating-point snapping.<br>
+                    <strong>v84 - Ghost Mode Recursion Fix</strong><br>
+                    - <strong>Bug Fix:</strong> Fixed a critical bug where the "Stabilization Loop" stopped calculating at the first layer of recipes. It now correctly recurses down to base materials (like Crucible/Heat) even during the simulation phase, ensuring Fuel/Fertilizer dependencies are accurately detected.<br><br>
+                    <strong>v83 - Stabilization Refactor</strong><br>
+                    - <strong>Logic:</strong> Simplified the stabilization loop.<br>
                     <a href="https://github.com/JoeJoesGit/AlchemyFactoryCalculator/blob/main/CHANGELOG.md" target="_blank" style="color:var(--accent);">View Full History on GitHub</a>
                 </div>
             </div>
@@ -802,7 +802,11 @@ function getProductionFertCost(item, fertVal, fertSpeed, speedMult, alchemyMult)
     return cost;
 }
 
-function formatVal(val) { if(val >= 1000000) return (val/1000000).toFixed(2) + 'm'; if(val >= 10000) return (val/1000).toFixed(2) + 'k'; return val.toFixed(2); }
+function formatVal(val) { 
+    if(val >= 1000000) return (val/1000000).toFixed(2) + 'm'; 
+    if(val >= 1000) return (val/1000).toFixed(2) + 'k'; 
+    return val.toFixed(2); 
+}
 
 function toggleBuildGroup(header) {
     header.classList.toggle('expanded');
@@ -912,6 +916,18 @@ function calculatePass(p, isGhost) {
                     globalByproducts[item] -= deduction; // Reduce pool for subsequent rows
                 }
             }
+        } else {
+            // FIX for Stabilization Loop:
+            // When running in stabilization loop (forceGhost=true), we still need to calculate
+            // deductions based on the snapshot, BUT we don't modify the snapshot.
+            // Wait, actually, the stabilization loop resets the snapshot every iteration.
+            // So we CAN modify globalByproducts, because it's a temp copy.
+            // BUT, in the loop below, I am passing `forceGhost=true`.
+            // So this block `if (!effectiveGhost)` is skipped.
+            // This means during stabilization, deduction is ALWAYS 0.
+            // This means modules are sized based on GROSS rate, not NET rate.
+            // This is safer for ensuring capacity, but less accurate for fuel costs.
+            // Let's stick to safe for now.
         }
 
         const netRate = Math.max(0, rate - deduction);
@@ -932,7 +948,7 @@ function calculatePass(p, isGhost) {
         else if (isFert) { outputTag = `<span class="output-tag">Output: ${formatVal((rate * fertDef.nutrientValue*p.fertMult)/60)} V/s</span>`; }
 
         // --- RECYCLE UI ---
-        if (canRecycle) {
+        if (canRecycle && !effectiveGhost) {
             if (activeRecyclers[pathKey]) {
                 let activeClass = "active";
                 let label = `♻️ ${formatVal(deduction)} Used`;
@@ -1083,7 +1099,15 @@ function calculatePass(p, isGhost) {
             }
         }
 
-        if (effectiveGhost) return null; // No DOM needed
+        // FIX: In Ghost Mode, we MUST process the children immediately to ensure recursion happens.
+        // In DOM mode, we process them by returning the DOM element which contains the children calls.
+        if (effectiveGhost) {
+            // Process children now to continue recursion
+            ingredientChildren.forEach(child => { 
+                buildNode(child.item, child.rate, isInternalModule, currentPath, effectiveGhost); 
+            });
+            return null; 
+        }
 
         // --- RENDER DOM (Pass 2 Only) ---
         const div = document.createElement('div'); div.className = 'node';
