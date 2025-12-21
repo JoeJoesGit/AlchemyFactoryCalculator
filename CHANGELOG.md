@@ -1,4 +1,4 @@
-#Alchemy Factory Calculator Change Log
+# Alchemy Factory Calculator Change Log
 
 ## v81-v84 - Deep Logic Repair
 * **Fix:** **Ghost Recursion.** Fixed a critical bug where the "Stabilization Loop" stopped calculating at the first recipe layer. It now correctly recurses down to base ingredients to find hidden demands (e.g., a Crucible inside a Fertilizer module needing Heat).
@@ -239,4 +239,5 @@
 
 ## v17 - Construction List
 * **Feature:** Added a "Construction List" sidebar.
+
 * **Logic:** Sums total machine counts across all active chains and calculates required parent furnaces.
