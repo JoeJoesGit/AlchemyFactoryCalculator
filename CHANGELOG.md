@@ -1,3 +1,23 @@
+#Alchemy Factory Calculator Change Log
+
+## v81-v84 - Deep Logic Repair
+* **Fix:** **Ghost Recursion.** Fixed a critical bug where the "Stabilization Loop" stopped calculating at the first recipe layer. It now correctly recurses down to base ingredients to find hidden demands (e.g., a Crucible inside a Fertilizer module needing Heat).
+* **Fix:** **Cross-Coupling.** Internal Modules (Fuel/Fertilizer) now correctly report their heat/nutrient needs to the global system. This ensures the Fuel Module turns on even if the only thing demanding heat is the Fertilizer Module.
+* **Refactor:** Simplified the Stabilization Loop to reset global counters every iteration, ensuring 100% mathematical accuracy for circular supply chains.
+
+## v80 - Math Precision
+* **Math:** **Floating Point Snap.** Fixed a JavaScript precision error where division (e.g., 75 / 25) resulted in microscopic decimals (e.g., `3.0000004`), causing `Math.ceil` to calculate 4 machines instead of 3.
+* **UI:** **Raw Input Formatting.** Raw inputs now use `k`/`m` notation (e.g., `0.60k` instead of `0.6`) to prevent confusion when demanding large batch quantities.
+
+## v74-v79 - The Stabilization Update
+* **Logic:** **Iterative Solver.** Implemented a "Stabilization Loop" that simulates the factory calculation up to 10 times to resolve **Bi-Directional Dependencies** (e.g., Fuel needs Fertilizer <-> Fertilizer needs Heat).
+* **Logic:** **Ghost Mode.** Created a simulation pass to calculate Byproduct availability and Module demands before the final Render pass.
+
+## v72-v73 - Recycling & Closed Loops
+* **Feature:** **Byproduct Recycling.** Rows with available byproducts now show a "Recycle" toggle (♻️) on the far right.
+* **Logic:** **Net-Rate Math.** Machine counts and Raw Material costs are now calculated based on **Net Demand** (Gross Demand minus Recycled Amount).
+* **Impact:** This allows for accurate planning of "Closed Loop" systems (e.g., "Money Printers") where outputs are fed back into the chain to purchase inputs, correctly showing 0 raw cost if the loop is self-sustaining.
+
 ## v64 - Tooltips & Insight
 * **UI:** **Hover Tooltips.** Hovering over machine counts (e.g., "24 Grinders") now displays a detailed tooltip showing the Recipe, Base Time, Speed Multiplier, and actual Items/Min throughput per machine.
 * **UX:** Provides instant verification of *why* a certain number of machines is required without leaving the main view.
