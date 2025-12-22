@@ -489,5 +489,4 @@ window.ALCHEMY_DB = {
         "defaultFuel": "Plank",
         "defaultFert": "Basic Fertilizer"
     }
-
 };
