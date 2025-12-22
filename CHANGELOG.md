@@ -1,5 +1,18 @@
 # Alchemy Factory Calculator Change Log
 
+## v93 - Slider Alignment & Visuals
+* **UI Fix:** **Perfect Alignment.** Corrected the slider tick math (`+2px` offset) to ensure the tick marks line up perfectly with the slider handle's visual center.
+* **UI:** **Diamond Handle.** Replaced the standard round slider thumb with a custom CSS "Diamond/Triangle" pointer for better precision.
+* **UI:** **Vertical Fractions.** Converted slider labels (e.g., 1/32) to a compact vertical stack format to prevent horizontal crowding.
+
+## v92 - Smart Feedback & Fine Tuning
+* **UI:** **Smart Label.** The Rate label now dynamically displays context based on the current value (e.g., `~1/6 Belt, 16.6%`).
+* **Feature:** **Micro-Adjustments.** Updated the Rate input spinner to include `+/- 0.1` buttons, allowing for precise bottleneck tuning (e.g., adjusting 119.9 to 120.0).
+
+## v91 - Precision Slider
+* **UI:** **Slider Control.** Replaced the static "Belt Load" dropdown with a granular range slider.
+* **Logic:** **Factory Math.** The slider now snaps to factory-relevant fractions (1/64, 1/16, 5/6, etc.) rather than arbitrary percentages.
+
 ## v89-v90 - Accumulation Logic Repair
 * **Fix:** **Accumulation Guard.** Fixed a variable naming error (`isGhost` vs `effectiveGhost`) in the accumulation logic that prevented Internal Modules from reporting their needs during the stabilization loop.
 * **Fix:** **Missing Modules.** The Main Production Chain now correctly registers its Heat/Nutrient demands during the Render Pass, while Internal Modules are prevented from double-counting during their final draw. This ensures modules activate correctly and totals are accurate.

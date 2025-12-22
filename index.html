@@ -3,17 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alchemy Factory Planner v90</title>
+    <title>Alchemy Factory Planner v93</title>
     <script src="alchemy_db.js"></script> 
+    <script src="alchemy_constants.js"></script> 
     
     <style>
-        /* --- CORE THEME --- */
+        /* ==========================================================================
+           SECTION: CSS - CORE THEME & VARIABLES
+           ========================================================================== */
         :root { 
             --bg: #1a1a1a; --text: #e0e0e0; --accent: #4caf50; 
             --panel: #2d2d2d; --border: #444; --warn: #ff9800; 
             --gold: #ffd700; --info: #2196f3; --profit: #00e676; 
             --bio: #76ff03; --fuel: #ff5722; --danger: #f44336;
             --row-id: #4fc3f7; --byproduct: #9c27b0;
+            --thumb-size: 14px; /* Variable for slider thumb calculations */
         }
         * { box-sizing: border-box; }
         body { 
@@ -24,7 +28,9 @@
             font-size: 13px; 
         }
         
-        /* --- HEADER --- */
+        /* ==========================================================================
+           SECTION: CSS - LAYOUT & GRID
+           ========================================================================== */
         header { 
             background: #111; padding: 8px 20px; 
             border-bottom: 1px solid var(--border); 
@@ -41,7 +47,6 @@
         .subtitle { color: #888; font-size: 0.8em; margin-left: 10px; cursor: pointer; text-decoration: underline; }
         .subtitle:hover { color: #fff; }
         
-        /* --- TABS --- */
         .tabs { display: flex; gap: 5px; }
         .tab-btn { 
             background: #222; border: 1px solid var(--border); 
@@ -51,7 +56,6 @@
         .tab-btn:hover { background: #333; color: #fff; }
         .tab-btn.active { background: var(--accent); color: white; border-color: var(--accent); font-weight: bold; }
 
-        /* --- LAYOUT --- */
         main { flex: 1; overflow: hidden; position: relative; }
         .view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow-y: auto; padding: 15px; display: none; }
         .view.active { display: block; }
@@ -72,12 +76,61 @@
             padding-bottom: 8px; font-size: 1.05em; margin-bottom: 10px; 
         }
 
-        /* --- CONTROLS --- */
+        /* ==========================================================================
+           SECTION: CSS - CONTROLS & INPUTS
+           ========================================================================== */
         .input-group { margin-bottom: 12px; position: relative; }
         label { display: block; font-size: 0.85em; color: #aaa; margin-bottom: 4px; }
         select { width: 100%; padding: 6px; background: #333; border: 1px solid #555; color: white; border-radius: 4px; font-size: 1em; }
         
-        /* --- SMART COMBOBOX --- */
+        /* ==========================================================================
+           SECTION: CSS - SLIDER COMPONENTS
+           ========================================================================== */
+        .slider-container { position: relative; width: 100%; height: 50px; margin-top: 5px; }
+        input[type=range] {
+            width: 100%; -webkit-appearance: none; background: transparent; cursor: pointer; position: relative; z-index: 10;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; background: #444; border-radius: 3px;
+        }
+        
+        /* THUMB: Downward Triangle Pointer */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; 
+            height: var(--thumb-size); width: var(--thumb-size); 
+            background: var(--accent); 
+            margin-top: -6px; /* Center on track */
+            border: none;
+            clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+            transform: none;
+            border-radius: 0; 
+            position: relative;
+            z-index: 20;
+        }
+        input[type=range]:focus { outline: none; }
+        
+        .slider-ticks {
+            position: absolute; top: 14px; left: 0; right: 0; height: 20px; pointer-events: none;
+        }
+        .tick-mark {
+            position: absolute; display: flex; flex-direction: column; align-items: center; transform: translateX(-50%);
+        }
+        .tick-line { width: 1px; height: 6px; background: #666; margin-bottom: 2px; }
+        .tick-mark.labeled .tick-line { height: 8px; background: #999; }
+        
+        /* Vertical Fractions Logic */
+        .vertical-frac { 
+            display: flex; flex-direction: column; align-items: center; 
+            color: #888; font-family: sans-serif; font-size: 9px; line-height: 1;
+        }
+        .vertical-frac .num { margin-bottom: 2px; }
+        .vertical-frac .sep { width: 8px; height: 1px; background: #666; opacity: 0.7; }
+        .vertical-frac .den { margin-top: 2px; }
+        .vertical-frac.full-label { font-size: 10px; margin-top: 2px; }
+
+        /* ==========================================================================
+           SECTION: CSS - COMBOBOX
+           ========================================================================== */
         .combobox-container { position: relative; width: 100%; }
         .input-wrapper { position: relative; display: flex; align-items: center; background: #333; border: 1px solid #555; border-radius: 4px; }
         .real-input {
@@ -102,17 +155,21 @@
         .combo-item.selected { border-left: 3px solid var(--accent); background: #2e3d30; }
         .combo-cat { font-size: 0.75em; color: #666; font-style: italic; }
 
-        /* --- SPINNERS --- */
+        /* ==========================================================================
+           SECTION: CSS - SPINNERS & BUTTONS
+           ========================================================================== */
         .spinner-wrapper { display: flex; align-items: stretch; width: 100%; height: 32px; }
-        .spinner-btn { background: #444; border: 1px solid #555; color: white; width: 35px; cursor: pointer; font-size: 1.2em; font-weight: bold; display: flex; align-items: center; justify-content: center; transition: 0.1s; }
+        .spinner-btn { background: #444; border: 1px solid #555; color: white; padding: 0 10px; cursor: pointer; font-size: 0.9em; font-weight: bold; display: flex; align-items: center; justify-content: center; transition: 0.1s; min-width: 32px; }
         .spinner-btn:hover { background: #555; }
         .spinner-btn:active { background: var(--accent); }
-        .spinner-btn.minus { border-radius: 4px 0 0 4px; }
-        .spinner-btn.plus { border-radius: 0 4px 4px 0; }
-        input[type="number"] { flex: 1; text-align: center; font-size: 1.1em; background: #333; border: 1px solid #555; border-left: none; border-right: none; color: white; width: 10px; -moz-appearance: textfield; }
+        .spinner-btn.left { border-right: none; }
+        .spinner-btn.right { border-left: none; }
+        .spinner-btn.first { border-radius: 4px 0 0 4px; }
+        .spinner-btn.last { border-radius: 0 4px 4px 0; }
+        
+        input[type="number"] { flex: 1; text-align: center; font-size: 1.1em; background: #333; border: 1px solid #555; border-left: 1px solid #444; border-right: 1px solid #444; color: white; width: 10px; -moz-appearance: textfield; }
         input:disabled { opacity: 0.5; cursor: not-allowed; background: #2a2a2a; color: #aaa; }
         
-        /* --- BUTTONS --- */
         .split-btn-container { display: flex; gap: 5px; margin-top: 6px; }
         .split-btn { flex: 1; padding: 6px 4px; border: 1px solid #555; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold; transition: 0.2s; color: #ddd; background: #333; text-align: center; }
         .split-btn:hover:not(:disabled) { background: #444; color: #fff; }
@@ -121,7 +178,9 @@
         .checkbox-row { display: flex; align-items: center; margin-top: 8px; font-size: 0.9em; color: #ccc; }
         .checkbox-row input { margin-right: 8px; }
 
-        /* --- CONSTRUCTION LIST --- */
+        /* ==========================================================================
+           SECTION: CSS - CONSTRUCTION LIST
+           ========================================================================== */
         .build-list { list-style: none; padding: 0; margin: 0; }
         .build-group { margin-bottom: 2px; }
         .build-header { 
@@ -140,7 +199,9 @@
         .total-mats-header { margin-top: 20px; border-top: 1px solid #555; padding-top: 10px; font-weight: bold; color: var(--accent); text-transform: uppercase; font-size: 0.9em; }
         .total-mat-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #333; font-size: 0.95em; color: #ddd; }
         
-        /* --- SUMMARY BOX --- */
+        /* ==========================================================================
+           SECTION: CSS - SUMMARY BOX
+           ========================================================================== */
         .summary-box { background: #252525; border-left: 4px solid var(--accent); padding: 12px; margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 10px; }
         .stat-block { display: flex; flex-direction: column; padding-right: 10px; border-right: 1px solid #444; }
         .stat-block:last-child { border-right: none; }
@@ -149,7 +210,9 @@
         .stat-sub { font-size: 0.85em; color: var(--warn); margin-top: 2px; }
         .gold-profit { color: var(--profit); } .gold-cost { color: var(--gold); } .net-positive { color: #69f0ae; }
 
-        /* --- TREE NODES --- */
+        /* ==========================================================================
+           SECTION: CSS - TREE NODES
+           ========================================================================== */
         .node { margin-left: 15px; padding: 4px 0; border-left: 2px solid #555; position: relative; }
         .node-content { display: flex; align-items: center; gap: 8px; background: #222; padding: 6px 10px; border-radius: 4px; border: 1px solid #333; }
         .tree-arrow { display: inline-block; width: 14px; cursor: pointer; transition: transform 0.1s; user-select: none; font-size: 0.8em; color: #888; text-align:center; }
@@ -173,7 +236,6 @@
         .swap-btn { background: transparent; border: 1px solid #555; color: #888; width: 22px; height: 22px; border-radius: 11px; font-size: 11px; cursor: pointer; margin-left: 10px; }
         .swap-btn:hover { background: #444; color: white; border-color: #fff; }
         
-        /* Recycle Button Styles */
         .push-right { margin-left: auto; display: flex; align-items: center; }
         .recycle-btn { background: transparent; border: 1px solid var(--byproduct); color: var(--byproduct); border-radius: 4px; font-size: 0.8em; cursor: pointer; padding: 2px 8px; font-weight:bold; transition:0.2s; }
         .recycle-btn:hover { background: rgba(156, 39, 176, 0.2); }
@@ -181,7 +243,9 @@
         
         .section-header { margin-top: 25px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px dashed #555; color: #888; text-transform: uppercase; letter-spacing: 1px; font-size: 0.85em; font-weight: bold; }
 
-        /* --- MODALS & EDITOR --- */
+        /* ==========================================================================
+           SECTION: CSS - MODALS & EDITOR
+           ========================================================================== */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: var(--panel); border: 1px solid var(--border); width: 600px; max-width: 90%; max-height: 80vh; overflow-y: auto; padding: 20px; border-radius: 8px; }
         .modal-header { display: flex; justify-content: space-between; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 10px; }
@@ -210,7 +274,7 @@
             <h1>Alchemy Factory Planner</h1>
             <span style="margin-left: 20px;">
                 <a href="https://github.com/JoeJoesGit/AlchemyFactoryCalculator" target="_blank" class="repo-link">GitHub Repo</a>
-                <span class="subtitle" onclick="showChangelog()">v90 | View Changelog</span>
+                <span class="subtitle" onclick="showChangelog()">v93 | View Changelog</span>
             </span>
         </div>
         <div class="tabs">
@@ -224,10 +288,12 @@
             <div class="modal-content">
                 <div class="modal-header"><h2>Changelog</h2><button class="close-modal" onclick="closeModal('changelog-modal')">&times;</button></div>
                 <div style="line-height:1.6; color:#ccc;">
-                    <strong>v90 - Accumulation Guard Fix</strong><br>
-                    - <strong>Bug Fix:</strong> Fixed a variable naming error (`isGhost` vs `effectiveGhost`) in the accumulation logic that prevented Internal Modules from reporting their needs during the stabilization loop.<br><br>
-                    <strong>v89 - Accumulation Logic Repair</strong><br>
-                    - <strong>Bug Fix:</strong> Fixed the "Missing Modules" bug.<br>
+                    <strong>v93 - Slider Alignment Fix</strong><br>
+                    - <strong>UI Fix:</strong> Corrected slider tick alignment to perfectly match handle position.<br>
+                    - <strong>UI Update:</strong> Changed slider handle to a "Diamond" style.<br>
+                    - <strong>UI Update:</strong> Converted fraction labels to vertical stacks for better readability.<br><br>
+                    <strong>v92 - Smart Slider & Feedback</strong><br>
+                    - <strong>UI:</strong> Added smart feedback label to Rate box (shows % and ~Fraction).<br>
                     <a href="https://github.com/JoeJoesGit/AlchemyFactoryCalculator/blob/main/CHANGELOG.md" target="_blank" style="color:var(--accent);">View Full History on GitHub</a>
                 </div>
             </div>
@@ -259,26 +325,21 @@
                                 <div id="combobox-list" class="combobox-list"></div>
                             </div>
                         </div>
-                        <div class="input-group">
-                            <label>Belt Load</label>
-                            <select id="ratePreset" onchange="applyPreset()">
-                                <option value="1" selected>Full Belt (100%)</option>
-                                <option value="0.6666666">2/3 Belt (~66%)</option>
-                                <option value="0.5">1/2 Belt (50%)</option>
-                                <option value="0.3333333">1/3 Belt (~33%)</option>
-                                <option value="0.25">1/4 Belt (25%)</option>
-                                <option value="0.125">1/8 Belt (12.5%)</option>
-                                <option value="0.0625">1/16 Belt (6.25%)</option>
-                                <option value="0.03125">1/32 Belt (3.125%)</option>
-                                <option value="custom">Custom Rate</option>
-                            </select>
+                        <div class="input-group" style="margin-bottom:20px;">
+                            <label>Belt Load Fraction</label>
+                            <div class="slider-container">
+                                <input type="range" id="beltSlider" min="0" max="100" step="1" oninput="updateFromSlider()">
+                                <div id="sliderTicks" class="slider-ticks"></div>
+                            </div>
                         </div>
                         <div class="input-group">
-                            <label>Rate (Items/Min)</label>
+                            <label id="rateLabel">Rate (Items/Min)</label>
                             <div class="spinner-wrapper">
-                                <button class="spinner-btn minus" onclick="adjustRate(-1)">-</button>
-                                <input type="number" id="targetRate" value="60" oninput="calculate()" disabled>
-                                <button class="spinner-btn plus" onclick="adjustRate(1)">+</button>
+                                <button class="spinner-btn left first" onclick="adjustRate(-1)">-1</button>
+                                <button class="spinner-btn left" onclick="adjustRate(-0.1)">-0.1</button>
+                                <input type="number" id="targetRate" value="60" oninput="calculate()">
+                                <button class="spinner-btn right" onclick="adjustRate(0.1)">+0.1</button>
+                                <button class="spinner-btn right last" onclick="adjustRate(1)">+1</button>
                             </div>
                         </div>
                     </div>
@@ -329,41 +390,41 @@
                         <div class="input-group">
                             <label>Belt Speed</label>
                             <div class="spinner-wrapper">
-                                <button class="spinner-btn minus" onclick="adjustInput('lvlBelt', -1); applyPreset();">-</button>
-                                <input type="number" id="lvlBelt" value="0" min="0" oninput="applyPreset()">
-                                <button class="spinner-btn plus" onclick="adjustInput('lvlBelt', 1); applyPreset();">+</button>
+                                <button class="spinner-btn left first" onclick="adjustInput('lvlBelt', -1); updateFromSlider();">-</button>
+                                <input type="number" id="lvlBelt" value="0" min="0" oninput="updateFromSlider()">
+                                <button class="spinner-btn right last" onclick="adjustInput('lvlBelt', 1); updateFromSlider();">+</button>
                             </div>
                         </div>
                         <div class="input-group">
                             <label>Factory Speed</label>
                             <div class="spinner-wrapper">
-                                <button class="spinner-btn minus" onclick="adjustInput('lvlSpeed', -1); calculate();">-</button>
+                                <button class="spinner-btn left first" onclick="adjustInput('lvlSpeed', -1); calculate();">-</button>
                                 <input type="number" id="lvlSpeed" value="0" min="0" oninput="calculate()">
-                                <button class="spinner-btn plus" onclick="adjustInput('lvlSpeed', 1); calculate();">+</button>
+                                <button class="spinner-btn right last" onclick="adjustInput('lvlSpeed', 1); calculate();">+</button>
                             </div>
                         </div>
                         <div class="input-group">
                             <label>Alchemy Skill</label>
                             <div class="spinner-wrapper">
-                                <button class="spinner-btn minus" onclick="adjustInput('lvlAlchemy', -1); calculate();">-</button>
+                                <button class="spinner-btn left first" onclick="adjustInput('lvlAlchemy', -1); calculate();">-</button>
                                 <input type="number" id="lvlAlchemy" value="0" min="0" oninput="calculate()">
-                                <button class="spinner-btn plus" onclick="adjustInput('lvlAlchemy', 1); calculate();">+</button>
+                                <button class="spinner-btn right last" onclick="adjustInput('lvlAlchemy', 1); calculate();">+</button>
                             </div>
                         </div>
                         <div class="input-group">
                             <label>Fuel Efficiency</label>
                             <div class="spinner-wrapper">
-                                <button class="spinner-btn minus" onclick="adjustInput('lvlFuel', -1); calculate();">-</button>
+                                <button class="spinner-btn left first" onclick="adjustInput('lvlFuel', -1); calculate();">-</button>
                                 <input type="number" id="lvlFuel" value="0" min="0" oninput="calculate()">
-                                <button class="spinner-btn plus" onclick="adjustInput('lvlFuel', 1); calculate();">+</button>
+                                <button class="spinner-btn right last" onclick="adjustInput('lvlFuel', 1); calculate();">+</button>
                             </div>
                         </div>
                         <div class="input-group">
                             <label>Fert Efficiency</label>
                             <div class="spinner-wrapper">
-                                <button class="spinner-btn minus" onclick="adjustInput('lvlFert', -1); calculate();">-</button>
+                                <button class="spinner-btn left first" onclick="adjustInput('lvlFert', -1); calculate();">-</button>
                                 <input type="number" id="lvlFert" value="0" min="0" oninput="calculate()">
-                                <button class="spinner-btn plus" onclick="adjustInput('lvlFert', 1); calculate();">+</button>
+                                <button class="spinner-btn right last" onclick="adjustInput('lvlFert', 1); calculate();">+</button>
                             </div>
                         </div>
                     </div>
@@ -391,6 +452,9 @@
     </main>
 
 <script>
+/* ==========================================================================
+   SECTION: JS - GLOBAL STATE & INIT
+   ========================================================================== */
 let DB = null;
 const STORAGE_KEY = "alchemy_factory_save_v1";
 const SOURCE_KEY = "alchemy_source_v1";
@@ -461,20 +525,92 @@ function init() {
     prepareComboboxData();
     populateSelects(); 
     loadSettingsToUI();
+    renderSlider(); // Initialize the slider logic
     
     if (urlItem && urlRate) {
         document.getElementById('targetItemInput').value = decodeURIComponent(urlItem);
         document.getElementById('targetRate').disabled = false;
-        document.getElementById('ratePreset').value = "custom";
         document.getElementById('targetRate').value = urlRate;
     } else {
-        applyPreset();
+        updateFromSlider(); // Apply default slider position
     }
     
     loadEditorContent(); 
     calculate();
 }
 
+/* ==========================================================================
+   SECTION: JS - SLIDER LOGIC
+   ========================================================================== */
+function renderSlider() {
+    if (typeof BELT_FRACTIONS === 'undefined') {
+        console.error("alchemy_constants.js not loaded.");
+        return;
+    }
+    const slider = document.getElementById('beltSlider');
+    const ticksContainer = document.getElementById('sliderTicks');
+    const thumbWidth = 14; // Must match CSS --thumb-size
+    
+    // Set slider max to array length
+    slider.max = BELT_FRACTIONS.length - 1;
+    slider.value = BELT_FRACTIONS.length - 1; // Default to Full
+    
+    ticksContainer.innerHTML = '';
+    
+    BELT_FRACTIONS.forEach((frac, idx) => {
+        const pct = (idx / (BELT_FRACTIONS.length - 1));
+        
+        // --- ALIGNMENT MATH ---
+        // Range Input Logic: Thumb center moves from [ThumbWidth/2] to [Width - ThumbWidth/2]
+        // This formula nudges the ticks inward based on percentage to align with center
+        const leftPos = `calc(${pct * 100}% + (${(thumbWidth/2) - (thumbWidth * pct) + 2}px))`;
+        
+        const tick = document.createElement('div');
+        tick.className = `tick-mark ${frac.label ? 'labeled' : ''}`;
+        tick.style.left = leftPos;
+        
+        let labelHtml = '';
+        if (frac.label) {
+            if (frac.label === "Full") {
+                labelHtml = `<div class="vertical-frac full-label">Full</div>`;
+            } else if (frac.label.includes("/")) {
+                const [n, d] = frac.label.split("/");
+                labelHtml = `
+                    <div class="vertical-frac">
+                        <span class="num">${n}</span>
+                        <span class="sep"></span>
+                        <span class="den">${d}</span>
+                    </div>`;
+            } else {
+                labelHtml = `<div class="vertical-frac">${frac.label}</div>`;
+            }
+        }
+        
+        tick.innerHTML = `<div class="tick-line"></div>${labelHtml}`;
+        ticksContainer.appendChild(tick);
+    });
+}
+
+function updateFromSlider() {
+    if (typeof BELT_FRACTIONS === 'undefined') return;
+    
+    const sliderIndex = parseInt(document.getElementById('beltSlider').value);
+    const fraction = BELT_FRACTIONS[sliderIndex];
+    const lvlBelt = parseInt(document.getElementById('lvlBelt').value) || 0;
+    const currentSpeed = getBeltSpeed(lvlBelt);
+    
+    const rate = calculateRateFromFraction(fraction, currentSpeed);
+    
+    // Update the input box
+    const rateInput = document.getElementById('targetRate');
+    rateInput.value = parseFloat(rate.toFixed(2));
+    
+    calculate();
+}
+
+/* ==========================================================================
+   SECTION: JS - EDITOR & DATA MANAGEMENT
+   ========================================================================== */
 function loadEditorContent() {
     const localSource = localStorage.getItem(SOURCE_KEY);
     const editor = document.getElementById('json-editor');
@@ -492,6 +628,24 @@ function loadEditorContent() {
     }
 }
 
+function applyChanges() {
+    const txt = document.getElementById('json-editor').value;
+    try { eval(txt); DB = window.ALCHEMY_DB; localStorage.setItem(SOURCE_KEY, txt); persist(); init(); alert("Applied!"); } catch(e) { alert("Syntax Error: " + e.message); }
+}
+
+function exportData() {
+    const txt = document.getElementById('json-editor').value; const blob = new Blob([txt], { type: "text/javascript" });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = "alchemy_db.js"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function persist() { 
+    DB.settings.activeRecyclers = activeRecyclers;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); 
+}
+
+/* ==========================================================================
+   SECTION: JS - COMBOBOX LOGIC
+   ========================================================================== */
 function prepareComboboxData() {
     const allItems = new Set(Object.keys(DB.items || {}));
     if(DB.recipes) DB.recipes.forEach(r => Object.keys(r.outputs).forEach(k => allItems.add(k)));
@@ -607,6 +761,9 @@ function selectItem(name) {
     document.getElementById('ghost-text').innerText = ""; closeCombobox(); updateComboIcon(); calculate();
 }
 
+/* ==========================================================================
+   SECTION: JS - UI HANDLERS (INPUTS/SETTINGS)
+   ========================================================================== */
 function loadSettingsToUI() {
     if (DB.settings) {
         ['lvlBelt','lvlSpeed','lvlAlchemy','lvlFuel','lvlFert'].forEach(k => { if(DB.settings[k] !== undefined) document.getElementById(k).value = DB.settings[k]; });
@@ -662,16 +819,32 @@ function updateDefaultButtonState() {
     if(curFert === defFert) { btnFert.disabled = true; btnFert.innerText = "Current Default"; } else { btnFert.disabled = false; btnFert.innerText = "Make Default"; }
 }
 
-function persist() { 
-    DB.settings.activeRecyclers = activeRecyclers;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); 
-}
 function saveSettings() { ['lvlBelt','lvlSpeed','lvlAlchemy','lvlFuel','lvlFert'].forEach(k => { DB.settings[k] = parseInt(document.getElementById(k).value) || 0; }); persist(); alert("Settings Saved!"); }
 function resetToDefault() { if(confirm("Factory Reset?")) { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(SOURCE_KEY); location.reload(); } }
 
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function showChangelog() { document.getElementById('changelog-modal').style.display = 'flex'; }
+function switchTab(tabName) {
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('view-' + tabName).classList.add('active');
+    const btnIndex = tabName === 'calc' ? 0 : 1;
+    document.querySelectorAll('.tab-btn')[btnIndex].classList.add('active');
+}
 
+function adjustInput(id, delta) { const el = document.getElementById(id); let val = parseInt(el.value) || 0; el.value = Math.max(0, val + delta); }
+function adjustRate(delta) { 
+    const el = document.getElementById('targetRate'); 
+    if(el.disabled) return; 
+    let val = parseFloat(el.value) || 0; 
+    // Fix floating point errors (e.g. 0.1 + 0.2 = 0.300000004)
+    el.value = (Math.round((val + delta) * 10) / 10).toFixed(1); 
+    calculate(); 
+}
+
+/* ==========================================================================
+   SECTION: JS - RECIPE MODAL LOGIC
+   ========================================================================== */
 function openRecipeModal(item, domElement) {
     const candidates = getRecipesFor(item);
     const list = document.getElementById('recipe-list');
@@ -727,39 +900,12 @@ function openDrillDown(item, rate) {
     window.open(url, '_blank');
 }
 
-function switchTab(tabName) {
-    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById('view-' + tabName).classList.add('active');
-    const btnIndex = tabName === 'calc' ? 0 : 1;
-    document.querySelectorAll('.tab-btn')[btnIndex].classList.add('active');
-}
-
-function applyChanges() {
-    const txt = document.getElementById('json-editor').value;
-    try { eval(txt); DB = window.ALCHEMY_DB; localStorage.setItem(SOURCE_KEY, txt); persist(); init(); alert("Applied!"); } catch(e) { alert("Syntax Error: " + e.message); }
-}
-
-function exportData() {
-    const txt = document.getElementById('json-editor').value; const blob = new Blob([txt], { type: "text/javascript" });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = "alchemy_db.js"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-}
-
-function adjustInput(id, delta) { const el = document.getElementById(id); let val = parseInt(el.value) || 0; el.value = Math.max(0, val + delta); }
-function adjustRate(delta) { const el = document.getElementById('targetRate'); if(el.disabled) return; let val = parseFloat(el.value) || 0; el.value = (val + delta).toFixed(1); calculate(); }
-
+/* ==========================================================================
+   SECTION: JS - HELPER FUNCTIONS
+   ========================================================================== */
 function getBeltSpeed(lvl) { let s = 60; if(lvl>0) s += Math.min(lvl,12)*15; if(lvl>12) s += (lvl-12)*3; return s; }
 function getSpeedMult(lvl) { let m = 1.0; m += Math.min(lvl,12)*0.25; if(lvl>12) m += (lvl-12)*0.05; return m; }
 function getAlchemyMult(lvl) { if(lvl<=0) return 1.0; let p = 0; for(let i=1; i<=lvl; i++) { if(i<=2) p+=6; else if(i<=8) p+=8; else p+=10; } return 1.0 + (p/100); }
-
-function applyPreset() {
-    const presetVal = document.getElementById('ratePreset').value; const rateInput = document.getElementById('targetRate');
-    if (presetVal === 'custom') { rateInput.disabled = false; } else {
-        rateInput.disabled = true; const lvlBelt = parseInt(document.getElementById('lvlBelt').value) || 0;
-        rateInput.value = (getBeltSpeed(lvlBelt) * parseFloat(presetVal)).toFixed(2);
-    }
-    calculate();
-}
 
 function getRecipesFor(item) { if(!DB.recipes) return []; return DB.recipes.filter(r => r.outputs[item]); }
 function getActiveRecipe(item) {
@@ -823,7 +969,9 @@ function toggleRecycle(pathKey) {
     calculate();
 }
 
-// --- CALCULATION ENGINE ---
+/* ==========================================================================
+   SECTION: JS - CALCULATION ENGINE
+   ========================================================================== */
 function calculate() {
     try {
         if(!DB || !DB.recipes) return;
@@ -852,6 +1000,12 @@ function calculate() {
             fertMult: 1 + (lvlFert * 0.10),
             beltSpeed: getBeltSpeed(lvlBelt)
         };
+
+        // --- UPDATE SMART LABEL (v92) ---
+        if (typeof getSmartLabel === 'function') {
+            const lbl = getSmartLabel(targetRate, params.beltSpeed);
+            document.getElementById('rateLabel').innerText = `Rate (Items/Min): ${lbl}`;
+        }
 
         // --- PASS 1: GHOST CALCULATION (Find Byproducts) ---
         globalByproducts = {}; 
@@ -1250,6 +1404,9 @@ function calculatePass(p, isGhost) {
     }
 }
 
+/* ==========================================================================
+   SECTION: JS - DOM RENDERING
+   ========================================================================== */
 function updateConstructionList(maxCounts, minCounts, furnaces) {
     const buildList = document.getElementById('construction-list'); buildList.innerHTML = '';
     const totalMatsContainer = document.getElementById('total-mats-container'); totalMatsContainer.innerHTML = '';
