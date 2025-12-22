@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alchemy Factory Planner v84</title>
+    <title>Alchemy Factory Planner v90</title>
     <script src="alchemy_db.js"></script> 
     
     <style>
@@ -210,7 +210,7 @@
             <h1>Alchemy Factory Planner</h1>
             <span style="margin-left: 20px;">
                 <a href="https://github.com/JoeJoesGit/AlchemyFactoryCalculator" target="_blank" class="repo-link">GitHub Repo</a>
-                <span class="subtitle" onclick="showChangelog()">v84 | View Changelog</span>
+                <span class="subtitle" onclick="showChangelog()">v90 | View Changelog</span>
             </span>
         </div>
         <div class="tabs">
@@ -224,10 +224,10 @@
             <div class="modal-content">
                 <div class="modal-header"><h2>Changelog</h2><button class="close-modal" onclick="closeModal('changelog-modal')">&times;</button></div>
                 <div style="line-height:1.6; color:#ccc;">
-                    <strong>v84 - Ghost Mode Recursion Fix</strong><br>
-                    - <strong>Bug Fix:</strong> Fixed a critical bug where the "Stabilization Loop" stopped calculating at the first layer of recipes. It now correctly recurses down to base materials (like Crucible/Heat) even during the simulation phase, ensuring Fuel/Fertilizer dependencies are accurately detected.<br><br>
-                    <strong>v83 - Stabilization Refactor</strong><br>
-                    - <strong>Logic:</strong> Simplified the stabilization loop.<br>
+                    <strong>v90 - Accumulation Guard Fix</strong><br>
+                    - <strong>Bug Fix:</strong> Fixed a variable naming error (`isGhost` vs `effectiveGhost`) in the accumulation logic that prevented Internal Modules from reporting their needs during the stabilization loop.<br><br>
+                    <strong>v89 - Accumulation Logic Repair</strong><br>
+                    - <strong>Bug Fix:</strong> Fixed the "Missing Modules" bug.<br>
                     <a href="https://github.com/JoeJoesGit/AlchemyFactoryCalculator/blob/main/CHANGELOG.md" target="_blank" style="color:var(--accent);">View Full History on GitHub</a>
                 </div>
             </div>
@@ -802,11 +802,7 @@ function getProductionFertCost(item, fertVal, fertSpeed, speedMult, alchemyMult)
     return cost;
 }
 
-function formatVal(val) { 
-    if(val >= 1000000) return (val/1000000).toFixed(2) + 'm'; 
-    if(val >= 1000) return (val/1000).toFixed(2) + 'k'; 
-    return val.toFixed(2); 
-}
+function formatVal(val) { if(val >= 1000000) return (val/1000000).toFixed(2) + 'm'; if(val >= 10000) return (val/1000).toFixed(2) + 'k'; return val.toFixed(2); }
 
 function toggleBuildGroup(header) {
     header.classList.toggle('expanded');
@@ -916,18 +912,6 @@ function calculatePass(p, isGhost) {
                     globalByproducts[item] -= deduction; // Reduce pool for subsequent rows
                 }
             }
-        } else {
-            // FIX for Stabilization Loop:
-            // When running in stabilization loop (forceGhost=true), we still need to calculate
-            // deductions based on the snapshot, BUT we don't modify the snapshot.
-            // Wait, actually, the stabilization loop resets the snapshot every iteration.
-            // So we CAN modify globalByproducts, because it's a temp copy.
-            // BUT, in the loop below, I am passing `forceGhost=true`.
-            // So this block `if (!effectiveGhost)` is skipped.
-            // This means during stabilization, deduction is ALWAYS 0.
-            // This means modules are sized based on GROSS rate, not NET rate.
-            // This is safer for ensuring capacity, but less accurate for fuel costs.
-            // Let's stick to safe for now.
         }
 
         const netRate = Math.max(0, rate - deduction);
@@ -979,10 +963,11 @@ function calculatePass(p, isGhost) {
 
             const totalNutrientsNeeded = netRate * itemDef.nutrientCost; const itemsNeeded = totalNutrientsNeeded / grossFertVal; 
             
-            // ALWAYS calculate demand, even in ghost mode
-            // Removed !isInternalModule check to fix cross-coupling
-            globalFertDemandItems += itemsNeeded; 
-            globalBioLoad += (totalNutrientsNeeded / 60); 
+            // ACCUMULATION LOGIC FIX v90: Check LOCAL ghost state, not global
+            if (effectiveGhost || !isInternalModule) {
+                globalFertDemandItems += itemsNeeded; 
+                globalBioLoad += (totalNutrientsNeeded / 60); 
+            }
             
             if(!effectiveGhost) {
                 let tooltipText = `Recipe: ${item} (Nursery)\nBase Time: ${(timePerItem * (60/p.speedMult)).toFixed(1)}s\nSpeed Mult: ${p.speedMult.toFixed(2)}x\nThroughput: ${itemsPerMinPerMachine.toFixed(2)} items/min`;
@@ -1048,7 +1033,7 @@ function calculatePass(p, isGhost) {
                     addMachineCount(recipe.machine, Math.ceil(machinesNeeded), machinesNeeded);
                 }
 
-                // HEAT CALCULATION - UNGUARDED to fix cross-coupling
+                // HEAT CALCULATION
                 if (DB.machines[recipe.machine] && DB.machines[recipe.machine].heatCost) {
                     const mach = DB.machines[recipe.machine]; const parent = DB.machines[mach.parent];
                     const sReq = mach.slotsRequired || 1; const pSlots = mach.parentSlots || parent.slots || 3;
@@ -1057,9 +1042,11 @@ function calculatePass(p, isGhost) {
                     
                     if(!effectiveGhost) totalFurnaces += parentsNeeded;
                     
-                    // Removed !isInternalModule check to fix cross-coupling
-                    globalHeatLoad += totalHeatPs; 
-                    globalFuelDemandItems += (totalHeatPs * 60) / grossFuelEnergy;
+                    // ACCUMULATION LOGIC FIX v90: Check LOCAL ghost state, not global
+                    if (effectiveGhost || !isInternalModule) {
+                        globalHeatLoad += totalHeatPs; 
+                        globalFuelDemandItems += (totalHeatPs * 60) / grossFuelEnergy;
+                    }
                     
                     if(!effectiveGhost) {
                         heatTag = `<span class="heat-tag">Heat: ${totalHeatPs.toFixed(1)} P/s, Needs ${((totalHeatPs * 60) / grossFuelEnergy).toFixed(1)}/m ${p.selectedFuel}</span>`;
@@ -1099,8 +1086,6 @@ function calculatePass(p, isGhost) {
             }
         }
 
-        // FIX: In Ghost Mode, we MUST process the children immediately to ensure recursion happens.
-        // In DOM mode, we process them by returning the DOM element which contains the children calls.
         if (effectiveGhost) {
             // Process children now to continue recursion
             ingredientChildren.forEach(child => { 
@@ -1141,47 +1126,56 @@ function calculatePass(p, isGhost) {
 
     // --- EXECUTE THE PASS ---
     if(p.targetItem) {
+        // Capture Main Chain Baselines BEFORE Stabilization Loop
         const root = buildNode(p.targetItem, grossRate, false, []);
+        
+        // Pass 1: Draw Main Chain to DOM
         if(!isGhost) {
             const h = document.createElement('div'); h.className = 'section-header'; h.innerText = `--- Primary Production Chain (${p.targetItem}) ---`; treeContainer.appendChild(h); 
             treeContainer.appendChild(root);
         }
     }
 
-    // ITERATIVE STABILIZATION FOR MODULES
+    // ITERATIVE STABILIZATION LOOP
     if (!isGhost) {
-        // We have rendered the Main Chain above.
-        // Now we need to determine the final size of the modules.
-        
         let stableFuelDemand = globalFuelDemandItems;
         let stableFertDemand = globalFertDemandItems;
-        let byproductSnapshot = {...globalByproducts};
+        let byproductSnapshot = {...globalByproducts}; 
+        
+        // Capture Baselines
+        let baseFuel = globalFuelDemandItems;
+        let baseFert = globalFertDemandItems;
+        let baseHeat = globalHeatLoad;
+        let baseBio = globalBioLoad;
+        let baseCost = globalCostPerMin;
         
         if (p.selfFeed || p.selfFert) {
-            let baseFuel = globalFuelDemandItems;
-            let baseFert = globalFertDemandItems;
             
             for(let i=0; i<10; i++) {
-                globalByproducts = {...byproductSnapshot};
+                // RESET Global Pools to baseline every iteration
+                globalFuelDemandItems = baseFuel;
+                globalFertDemandItems = baseFert;
+                globalHeatLoad = baseHeat;
+                globalBioLoad = baseBio;
+                globalCostPerMin = baseCost;
+                
+                globalByproducts = {...byproductSnapshot}; 
+                
                 let prevFuel = stableFuelDemand;
                 let prevFert = stableFertDemand;
-                let preGhostFuel = globalFuelDemandItems;
-                let preGhostFert = globalFertDemandItems;
                 
+                // Run Fert (Ghost)
                 if (p.selfFert && prevFert > 0) {
                     buildNode(p.selectedFert, prevFert, true, [], true); // Force isGhost=true
                 }
+                
+                // Run Fuel (Ghost)
                 if (p.selfFeed && prevFuel > 0) {
                     buildNode(p.selectedFuel, prevFuel, true, [], true); // Force isGhost=true
                 }
                 
-                let deltaFuel = globalFuelDemandItems - preGhostFuel;
-                let deltaFert = globalFertDemandItems - preGhostFert;
-                let nextFuel = baseFuel + deltaFuel;
-                let nextFert = baseFert + deltaFert;
-                
-                globalFuelDemandItems = baseFuel; 
-                globalFertDemandItems = baseFert; 
+                let nextFuel = globalFuelDemandItems;
+                let nextFert = globalFertDemandItems;
                 
                 if (Math.abs(nextFuel - prevFuel) < 0.01 && Math.abs(nextFert - prevFert) < 0.01) {
                     stableFuelDemand = nextFuel;
@@ -1193,32 +1187,33 @@ function calculatePass(p, isGhost) {
             }
         }
         
+        // Restore for final render
         globalByproducts = {...byproductSnapshot};
-        
-        // Now render the modules using the stabilized demands
-        if (p.selfFert && stableFertDemand > 0) {
-            const fertEff = netFertVal / grossFertVal; const grossFertNeeded = stableFertDemand / fertEff;
-            if (p.targetItem === p.selectedFert) {
-                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Nutrient Source: <strong>${p.selectedFert}</strong> (Supplied by Main Output)<br>Total Required: ${grossFertNeeded.toFixed(1)}/m</div>`; treeContainer.appendChild(note);
-            } else {
-                const h = document.createElement('div'); h.className = 'section-header'; h.innerText = `--- Internal Nutrient Module (${p.selectedFert}) ---`; treeContainer.appendChild(h); rowCounter=0; 
-                treeContainer.appendChild(buildNode(p.selectedFert, grossFertNeeded, true, []));
-            }
-        }
-
-        if (p.selfFeed && stableFuelDemand > 0) {
-            const fuelEff = netFuelEnergy / grossFuelEnergy; const grossFuelNeeded = stableFuelDemand / fuelEff;
-            if (p.targetItem === p.selectedFuel) {
-                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Fuel Source: <strong>${p.selectedFuel}</strong> (Supplied by Main Output)<br>Total Required: ${grossFuelNeeded.toFixed(1)}/m</div>`; treeContainer.appendChild(note);
-            } else {
-                const h = document.createElement('div'); h.className = 'section-header'; h.innerText = `--- Internal Heat Module (${p.selectedFuel}) ---`; treeContainer.appendChild(h); rowCounter=0; 
-                treeContainer.appendChild(buildNode(p.selectedFuel, grossFuelNeeded, true, []));
-            }
-        }
-        
-        // Override the globals with the stable values for the summary box
         globalFuelDemandItems = stableFuelDemand;
         globalFertDemandItems = stableFertDemand;
+        
+        // Only render the modules if we are in Pass 2 (not ghost)
+        if (!isGhost) {
+            if (p.selfFert && stableFertDemand > 0) {
+                const grossFertNeeded = stableFertDemand;
+                if (p.targetItem === p.selectedFert) {
+                    const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Nutrient Source: <strong>${p.selectedFert}</strong> (Supplied by Main Output)<br>Total Required: ${grossFertNeeded.toFixed(1)}/m</div>`; treeContainer.appendChild(note);
+                } else {
+                    const h = document.createElement('div'); h.className = 'section-header'; h.innerText = `--- Internal Nutrient Module (${p.selectedFert}) ---`; treeContainer.appendChild(h); rowCounter=0; 
+                    treeContainer.appendChild(buildNode(p.selectedFert, grossFertNeeded, true, []));
+                }
+            }
+
+            if (p.selfFeed && stableFuelDemand > 0) {
+                const grossFuelNeeded = stableFuelDemand;
+                if (p.targetItem === p.selectedFuel) {
+                    const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Fuel Source: <strong>${p.selectedFuel}</strong> (Supplied by Main Output)<br>Total Required: ${grossFuelNeeded.toFixed(1)}/m</div>`; treeContainer.appendChild(note);
+                } else {
+                    const h = document.createElement('div'); h.className = 'section-header'; h.innerText = `--- Internal Heat Module (${p.selectedFuel}) ---`; treeContainer.appendChild(h); rowCounter=0; 
+                    treeContainer.appendChild(buildNode(p.selectedFuel, grossFuelNeeded, true, []));
+                }
+            }
+        }
     }
 
     if (!isGhost) {
@@ -1237,7 +1232,7 @@ function calculatePass(p, isGhost) {
         const sortedByproducts = Object.keys(totalByproducts).sort();
         if (sortedByproducts.length > 0) {
             sortedByproducts.forEach(item => {
-                let remaining = globalByproducts[item] || 0; // After claims
+                let remaining = globalByproducts[item] || 0; 
                 let note = "";
                 if (remaining < totalByproducts[item]) {
                     note = ` <span style="font-size:0.8em; color:#888;">(${formatVal(totalByproducts[item] - remaining)} recycled)</span>`;

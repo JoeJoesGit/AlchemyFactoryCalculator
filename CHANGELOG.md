@@ -1,5 +1,17 @@
 # Alchemy Factory Calculator Change Log
 
+## v89-v90 - Accumulation Logic Repair
+* **Fix:** **Accumulation Guard.** Fixed a variable naming error (`isGhost` vs `effectiveGhost`) in the accumulation logic that prevented Internal Modules from reporting their needs during the stabilization loop.
+* **Fix:** **Missing Modules.** The Main Production Chain now correctly registers its Heat/Nutrient demands during the Render Pass, while Internal Modules are prevented from double-counting during their final draw. This ensures modules activate correctly and totals are accurate.
+
+## v87-v88 - Double Count Logic Fixes
+* **Fix:** **Double Counting.** Fixed the issue where Heat and Nutrient demand were being summed twice (once in the stabilization loop and once in the render pass), leading to inflated values in the Summary Box. Global accumulation is now disabled during the final render pass.
+* **Logic:** **Internal Sizing.** Corrected the sizing of internal modules to prevent double-taxing the efficiency calculation.
+
+## v85-v86 - Stabilization & Display Fixes
+* **Bug Fix:** **Runaway Accumulator.** Fixed the "Runaway Accumulator" bug in the Summary Box where totals were 10x higher than reality.
+* **Bug Fix:** **Ghost Pass.** The Stabilization Loop now runs in Pass 1 (Ghost Mode) as well. This ensures internal module byproducts are registered correctly so they can be recycled in the main chain.
+
 ## v81-v84 - Deep Logic Repair
 * **Fix:** **Ghost Recursion.** Fixed a critical bug where the "Stabilization Loop" stopped calculating at the first recipe layer. It now correctly recurses down to base ingredients to find hidden demands (e.g., a Crucible inside a Fertilizer module needing Heat).
 * **Fix:** **Cross-Coupling.** Internal Modules (Fuel/Fertilizer) now correctly report their heat/nutrient needs to the global system. This ensures the Fuel Module turns on even if the only thing demanding heat is the Fertilizer Module.
@@ -239,5 +251,4 @@
 
 ## v17 - Construction List
 * **Feature:** Added a "Construction List" sidebar.
-
 * **Logic:** Sums total machine counts across all active chains and calculates required parent furnaces.

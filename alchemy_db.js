@@ -448,11 +448,6 @@ window.ALCHEMY_DB = {
             "baseTime": 6.0 
         },
         { 
-            "id": "CopperPowder2_Alt", "machine": "Athanor", 
-            "inputs": { "Impure Copper Powder": 2 }, "outputs": { "Copper Powder": 1 }, 
-            "baseTime": 6.0 
-        },
-        { 
             "id": "SilverPowder3_Alt", "machine": "Advanced Athanor", 
             "inputs": { "Impure Silver Powder": 2 }, "outputs": { "Silver Powder": 1 }, 
             "baseTime": 8.0 
