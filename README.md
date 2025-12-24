@@ -5,7 +5,7 @@ Hi! This is a simple, browser-based calculator I built for the game **Alchemy Fa
 I created this primarily as a personal project to solve the math problems I was running into while playing (e.g., figuring out exactly how many Crucibles I need to feed my main production line, or how much fertilizer my herb farm actually consumes). It was also a fun experiment to see how much of the coding I could do using AI assistance (specifically Google Gemini).
 
 You can use the live version here:
-**[Launch Planner](https://joejoesgit.github.io/AlchemyFactoryCalculator/)**
+[**[Launch Planner](https://joejoesgit.github.io/AlchemyFactoryCalculator/)**]
 
 ### Is this tool complete?
 Nope!
