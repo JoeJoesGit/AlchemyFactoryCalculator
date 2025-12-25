@@ -1,19 +1,28 @@
 # Alchemy Factory Calculator Change Log
 
+## v96 - UI Polish & Code Cleanup (2025-12-24 19:24 EST)
+* **Feature:** **Visual Database Editor.** A complete overhaul of the data entry system. Replaced the raw text editor with a rich UI containing forms, dynamic lists, and toggle switches. Users can now safely edit Items, Recipes, and Machines without risking JSON syntax errors. (Includes a "Raw Source" fallback for advanced users).
+* **Refactor:** **Hybrid File Structure.** Cleaned up `index.html` to serve as a layout skeleton, moving all dynamic content logic, version control, and event handling into `alchemy_ui.js` to centralize configuration.
+* **UI:** **Ghost Tiers.** Fixed a visual bug in the Database Editor list where machines without a specific tier rendered as empty parentheses `()`. They now display as `(Tier: ?)` or `(Tier: 1)`.
+* **Fix:** **Editor Refresh.** The "Apply Changes" button in the Database Editor now immediately refreshes the sidebar list to reflect your edits without needing a page reload.
+* **Architecture:** **Single Source of Truth.** Moved the App Version definition to `alchemy_ui.js`. The HTML header now updates automatically based on the code constant.
+* **Architecture:** **Changelog Link.** Removed the in-app modal. The version link now opens this `CHANGELOG.md` file directly, supporting both Main and Beta folder structures.
+* **Layout:** **Header Reorder.** Swapped the position of the Version display and the GitHub link for better readability.
+
 ## v95 - Stability & Math Overhaul
-- **Furnace Aggregation:** Completely rewrote Stone Furnace calculation. It now aggregates total slot demand from all machines (including internal modules) and divides by capacity, rather than summing per-node requirements.
-- **Summary Box Logic:** Fixed the "Gross vs Net" calculation. "Gross" now correctly equals "Net Output + Internal Use".
-- **Global Load Tracking:** Fixed a bug where Internal Modules (Heat/Nutrient loops) were being excluded from the Global Heat and Fuel Demand totals.
-- **UI UX:** Selecting a new Target Item now immediately clamps the input rate to the current Belt Slider setting, preventing massive calculation spikes.
-- **Construction List:** split logic into "Max" (Physical Node Sum) and "Min" (Item Throughput Sum) for better planning accuracy.
+* **Furnace Aggregation:** Completely rewrote Stone Furnace calculation. It now aggregates total slot demand from all machines (including internal modules) and divides by capacity, rather than summing per-node requirements.
+* **Summary Box Logic:** Fixed the "Gross vs Net" calculation. "Gross" now correctly equals "Net Output + Internal Use".
+* **Global Load Tracking:** Fixed a bug where Internal Modules (Heat/Nutrient loops) were being excluded from the Global Heat and Fuel Demand totals.
+* **UI UX:** Selecting a new Target Item now immediately clamps the input rate to the current Belt Slider setting, preventing massive calculation spikes.
+* **Construction List:** split logic into "Max" (Physical Node Sum) and "Min" (Item Throughput Sum) for better planning accuracy.
 
 ## v94 - Calculation & Data Overhaul
-**Critical Fix:** Fixed Stone Furnace calculation at higher upgrade levels. Furnace self-heat (overhead) now properly scales with Factory Speed, preventing artificial drops in fuel machine counts.
-**Logic Overhaul:** Rewrote Construction List aggregation logic.
-	**Minimum:** Calculates based on total throughput for a specific item type (assumes merging identical production lines).
-	**Maximum:** Sums up the ceiling of every physical node shown in the tree (assumes separate production lines).
-**New Content:** Added "Enhanced Grinder" alternate recipes for all items that use a Grinder. These recipes have 50% `baseTime` to simulate 2x speed.
-**UI:** Fixed CSS for the "Swap Recipe" button to perfectly center the icon.
+* **Critical Fix:** Fixed Stone Furnace calculation at higher upgrade levels. Furnace self-heat (overhead) now properly scales with Factory Speed, preventing artificial drops in fuel machine counts.
+* **Logic Overhaul:** Rewrote Construction List aggregation logic.
+* 	**Minimum:** Calculates based on total throughput for a specific item type (assumes merging identical production lines).
+* 	**Maximum:** Sums up the ceiling of every physical node shown in the tree (assumes separate production lines).
+* **New Content:** Added "Enhanced Grinder" alternate recipes for all items that use a Grinder. These recipes have 50% `baseTime` to simulate 2x speed.
+* **UI:** Fixed CSS for the "Swap Recipe" button to perfectly center the icon.
 
 ## v93 - Slider Alignment & Visuals
 * **UI Fix:** **Perfect Alignment.** Corrected the slider tick math (`+2px` offset) to ensure the tick marks line up perfectly with the slider handle's visual center.

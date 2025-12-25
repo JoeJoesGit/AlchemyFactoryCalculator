@@ -4,6 +4,7 @@
    ========================================================================== */
 
 let DB = null;
+const APP_VERSION = "v96"; // Single source of truth for Version
 const STORAGE_KEY = "alchemy_factory_save_v1";
 const SOURCE_KEY = "alchemy_source_v1";
 
@@ -13,15 +14,18 @@ let allItemsList = [];
 let currentFocus = -1;
 
 // DB Editor State
-let currentDbSelection = null; // { type: 'item'|'recipe', key: 'id' }
-let isSourceView = false;
+let currentDbSelection = null; // { type: 'item'|'recipe'|'machine', key: 'id' }
 let dbFlatList = []; // Cache for search
+let currentFilter = 'all'; // 'all', 'item', 'recipe', 'machine'
 
 function init() {
     const localData = localStorage.getItem(STORAGE_KEY);
     const urlParams = new URLSearchParams(window.location.search);
     const urlItem = urlParams.get('item');
     const urlRate = urlParams.get('rate');
+
+    // Initialize Header (Title, Version, Changelog link)
+    initHeader();
 
     if (window.ALCHEMY_DB) {
         let localVersion = 0;
@@ -74,6 +78,9 @@ function init() {
     loadSettingsToUI();
     renderSlider(); 
     
+    // Create hidden datalist for smart inputs
+    createDataList();
+
     if (urlItem && urlRate) {
         document.getElementById('targetItemInput').value = decodeURIComponent(urlItem);
         document.getElementById('targetRate').disabled = false;
@@ -82,10 +89,50 @@ function init() {
         updateFromSlider(); 
     }
     
-    // We do NOT load source text into textarea immediately anymore.
-    // It is generated on demand in toggleSourceView()
+    // Default raw editor text
+    document.getElementById('json-editor').value = `window.ALCHEMY_DB = ${JSON.stringify(DB, null, 4)};`;
     
     calculate();
+}
+
+function initHeader() {
+    // 1. Update Browser Title
+    document.title = `Alchemy Factory Calculator - ${APP_VERSION}`;
+
+    // 2. Update Version Displays (looks for elements with class 'app-version')
+    const verEls = document.querySelectorAll('.app-version');
+    verEls.forEach(el => el.innerText = APP_VERSION);
+
+    // 3. Configure Changelog Links (looks for elements with class 'changelog-link')
+    // Uses a relative path so it works in /Beta/ folder or Root folder equally well
+    const clLinks = document.querySelectorAll('.changelog-link');
+    clLinks.forEach(el => {
+        if (el.tagName === 'A') {
+            el.href = "CHANGELOG.md";
+            el.target = "_blank";
+        } else {
+            // If it's a button or other element
+            el.onclick = () => window.open("CHANGELOG.md", "_blank");
+        }
+    });
+}
+
+function createDataList() {
+    const listId = "all-items-list";
+    let dl = document.getElementById(listId);
+    if (!dl) {
+        dl = document.createElement('datalist');
+        dl.id = listId;
+        document.body.appendChild(dl);
+    }
+    dl.innerHTML = '';
+    
+    // Populate with Items
+    Object.keys(DB.items).sort().forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item;
+        dl.appendChild(opt);
+    });
 }
 
 /* ==========================================================================
@@ -138,7 +185,7 @@ function updateFromSlider() {
 }
 
 /* ==========================================================================
-   SECTION: DB EDITOR LOGIC (NEW)
+   SECTION: DB EDITOR LOGIC (ENHANCED)
    ========================================================================== */
 function switchTab(tabName) {
     document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
@@ -166,9 +213,28 @@ function initDbEditor() {
         dbFlatList.push({ type: 'recipe', key: r.id, name: r.id, machine: r.machine, ...r });
     });
 
+    // Machines (NEW)
+    if (DB.machines) {
+        Object.keys(DB.machines).forEach(key => {
+            dbFlatList.push({ type: 'machine', key: key, name: key, ...DB.machines[key] });
+        });
+    }
+
     // Sort alpha
     dbFlatList.sort((a,b) => a.name.localeCompare(b.name));
 
+    filterDbList();
+}
+
+function setDbFilter(filter) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    const btns = document.querySelectorAll('.filter-btn');
+    if(filter === 'all') btns[0].classList.add('active');
+    if(filter === 'item') btns[1].classList.add('active');
+    if(filter === 'recipe') btns[2].classList.add('active');
+    if(filter === 'machine') btns[3].classList.add('active');
+    
     filterDbList();
 }
 
@@ -177,7 +243,10 @@ function filterDbList() {
     const listEl = document.getElementById('db-list');
     listEl.innerHTML = '';
 
-    const matches = dbFlatList.filter(x => x.name.toLowerCase().includes(term) || (x.machine && x.machine.toLowerCase().includes(term)));
+    const matches = dbFlatList.filter(x => {
+        if (currentFilter !== 'all' && x.type !== currentFilter) return false;
+        return x.name.toLowerCase().includes(term) || (x.machine && x.machine.toLowerCase().includes(term));
+    });
 
     matches.forEach(obj => {
         const div = document.createElement('div');
@@ -186,10 +255,22 @@ function filterDbList() {
             div.classList.add('selected');
         }
         
-        let typeLabel = obj.type === 'item' ? 'Item' : 'Recipe';
-        let subText = obj.type === 'item' ? (obj.category || '') : obj.machine;
+        let typeLabel = obj.type === 'item' ? 'Item' : (obj.type === 'recipe' ? 'Recipe' : 'Machine');
+        let subText = "";
         
-        div.innerHTML = `<span>${obj.name} <span style="color:#666; font-size:0.8em">(${subText})</span></span> <span class="db-type-tag ${obj.type}">${typeLabel}</span>`;
+        if (obj.type === 'item') subText = obj.category || '';
+        if (obj.type === 'recipe') subText = obj.machine;
+        
+        // Machine Logic: Show Tier if available, otherwise '?'
+        if (obj.type === 'machine') {
+            if (obj.tier !== undefined) {
+                subText = `Tier: ${obj.tier}`;
+            } else {
+                subText = "Tier: ?"; 
+            }
+        }
+        
+        div.innerHTML = `<span>${obj.name} <span class="db-subtext">(${subText})</span></span> <span class="db-type-tag ${obj.type}">${typeLabel}</span>`;
         div.onclick = () => selectDbObject(obj.type, obj.key);
         listEl.appendChild(div);
     });
@@ -198,12 +279,38 @@ function filterDbList() {
 function selectDbObject(type, key) {
     currentDbSelection = { type, key };
     document.getElementById('db-editor-title').innerText = key;
-    document.getElementById('btn-report-issue').style.display = 'inline-block';
-    document.getElementById('btn-report-issue').innerText = `Report Issue: ${key}`;
-    document.getElementById('btn-report-issue').style.background = '#d32f2f';
+    
+    // Show Report Button
+    const reportBtn = document.getElementById('btn-report-issue');
+    reportBtn.style.display = 'inline-block';
+    reportBtn.innerText = `Report Issue: ${key}`;
+    
+    // Hide Raw Editor if open
+    document.getElementById('full-source-wrapper').style.display = 'none';
+    document.getElementById('visual-editor-wrapper').style.display = 'block';
+    document.getElementById('btn-raw-mode').style.display = 'inline-block';
     
     filterDbList(); // Re-render to show selection highlight
     renderDbForm();
+    updateSnippetView();
+}
+
+function updateSnippetView() {
+    if (!currentDbSelection) return;
+    const { type, key } = currentDbSelection;
+    let data = null;
+    if (type === 'item') data = DB.items[key];
+    else if (type === 'machine') data = DB.machines[key];
+    else data = DB.recipes.find(r => r.id === key);
+
+    const snippet = document.getElementById('json-snippet');
+    document.getElementById('snippet-container').style.display = 'block';
+    
+    if (type === 'recipe') {
+        snippet.value = JSON.stringify(data, null, 4);
+    } else {
+        snippet.value = `"${key}": ${JSON.stringify(data, null, 4)}`;
+    }
 }
 
 function renderDbForm() {
@@ -211,15 +318,11 @@ function renderDbForm() {
     const container = document.getElementById('db-form-container');
     container.innerHTML = '';
     
-    // Switch off source view if on
-    if(isSourceView) toggleSourceView();
-
     const { type, key } = currentDbSelection;
     let data = null;
 
     if (type === 'item') {
         data = DB.items[key];
-        // Generate Item Form
         let formHtml = `<div class="db-form">`;
         formHtml += createInput('Category', 'text', data.category, 'category');
         formHtml += createInput('Buy Price (G)', 'number', data.buyPrice, 'buyPrice');
@@ -233,27 +336,53 @@ function renderDbForm() {
 
     } else if (type === 'recipe') {
         data = DB.recipes.find(r => r.id === key);
-        // Generate Recipe Form
         let formHtml = `<div class="db-form">`;
-        formHtml += createInput('Machine', 'text', data.machine, 'machine');
+        formHtml += createInput('Machine', 'text', data.machine, 'machine'); 
         formHtml += createInput('Base Time (sec)', 'number', data.baseTime, 'baseTime');
-        
-        // Inputs List
         formHtml += `<div class="form-group full-width"><label>Inputs</label><div class="dynamic-list" id="list-inputs"></div></div>`;
-        // Outputs List
         formHtml += `<div class="form-group full-width"><label>Outputs</label><div class="dynamic-list" id="list-outputs"></div></div>`;
-        
         formHtml += `</div>`;
         container.innerHTML = formHtml;
-
-        // Render Dynamic Lists
         renderDynamicList('inputs', data.inputs);
         renderDynamicList('outputs', data.outputs);
+
+    } else if (type === 'machine') {
+        data = DB.machines[key];
+        let formHtml = `<div class="db-form">`;
+        
+        // --- NEW MACHINE FIELDS ---
+        formHtml += createInput('Research Tier', 'number', data.tier, 'tier');
+        formHtml += createInput('Slots for Stacking', 'number', data.slots, 'slots');
+        formHtml += createInput('Slots Required', 'number', data.slotsRequired, 'slotsRequired');
+        formHtml += createInput('Parent (if module)', 'text', data.parent, 'parent');
+        
+        // Size and IO
+        formHtml += `<div class="form-group full-width" style="display:flex; gap:10px;">
+                        <div style="flex:1">${createInput('Size X', 'number', data.sizeX, 'sizeX')}</div>
+                        <div style="flex:1">${createInput('Size Y', 'number', data.sizeY, 'sizeY')}</div>
+                        <div style="flex:1">${createInput('Size Z', 'number', data.sizeZ, 'sizeZ')}</div>
+                     </div>`;
+                      
+        formHtml += `<div class="form-group full-width" style="display:flex; gap:10px;">
+                        <div style="flex:1">${createInput('Input Count', 'number', data.inputCount, 'inputCount')}</div>
+                        <div style="flex:1">${createInput('Output Count', 'number', data.outputCount, 'outputCount')}</div>
+                     </div>`;
+
+        // Heat Toggles
+        formHtml += createToggleInput('Heat Cost', data.heatCost, 'heatCost');
+        formHtml += createToggleInput('Heat Gen (Self)', data.heatSelf, 'heatSelf');
+        
+        // Build Cost List
+        formHtml += `<div class="form-group full-width"><label>Build Cost</label><div class="dynamic-list" id="list-buildCost"></div></div>`;
+        formHtml += `</div>`;
+        container.innerHTML = formHtml;
+        renderDynamicList('buildCost', data.buildCost);
     }
 }
 
 function createInput(label, type, val, prop) {
     let value = val !== undefined ? val : '';
+    // Special handling for nested styling above, strip wrapping div if needed or just return string
     return `
         <div class="form-group">
             <label>${label}</label>
@@ -262,14 +391,48 @@ function createInput(label, type, val, prop) {
     `;
 }
 
+function createToggleInput(label, val, prop) {
+    const isEnabled = (val !== undefined && val !== 0);
+    const value = isEnabled ? val : 0;
+    
+    return `
+        <div class="form-group">
+            <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" style="width:auto;" ${isEnabled ? 'checked' : ''} onchange="toggleField('${prop}', this.checked)">
+                ${label}
+            </label>
+            <input type="number" id="input-${prop}" value="${value}" ${isEnabled ? '' : 'disabled'} oninput="updateDbProperty('${prop}', this.value, 'number')">
+        </div>
+    `;
+}
+
+function toggleField(prop, checked) {
+    const input = document.getElementById(`input-${prop}`);
+    if (checked) {
+        input.disabled = false;
+        // Set to 0 if empty
+        if(input.value === "") input.value = 0;
+        updateDbProperty(prop, input.value, 'number');
+    } else {
+        input.disabled = true;
+        updateDbProperty(prop, 0, 'number'); // Or undefined if you prefer to delete key
+    }
+}
+
 function updateDbProperty(prop, val, type) {
     if (!currentDbSelection) return;
     let finalVal = val;
     if (type === 'number') finalVal = val === '' ? undefined : parseFloat(val);
 
+    // If toggled off (value 0 for heat), we might want to delete the key to keep DB clean
+    if ((prop === 'heatCost' || prop === 'heatSelf') && finalVal === 0) finalVal = undefined;
+
     if (currentDbSelection.type === 'item') {
         if (finalVal === undefined) delete DB.items[currentDbSelection.key][prop];
         else DB.items[currentDbSelection.key][prop] = finalVal;
+    } else if (currentDbSelection.type === 'machine') {
+        if (finalVal === undefined) delete DB.machines[currentDbSelection.key][prop];
+        else DB.machines[currentDbSelection.key][prop] = finalVal;
     } else {
         const recipe = DB.recipes.find(r => r.id === currentDbSelection.key);
         if (recipe) {
@@ -277,6 +440,7 @@ function updateDbProperty(prop, val, type) {
              else recipe[prop] = finalVal;
         }
     }
+    updateSnippetView();
 }
 
 function renderDynamicList(field, obj) {
@@ -288,7 +452,7 @@ function renderDynamicList(field, obj) {
             const row = document.createElement('div');
             row.className = 'dynamic-row';
             row.innerHTML = `
-                <input type="text" value="${item}" placeholder="Item Name" onchange="updateDynamicKey('${field}', '${item}', this.value)">
+                <input type="text" value="${item}" list="all-items-list" placeholder="Item Name" onchange="validateAndSetKey('${field}', '${item}', this)">
                 <input type="number" value="${obj[item]}" placeholder="Qty" oninput="updateDynamicVal('${field}', '${item}', this.value)">
                 <button class="btn-remove" onclick="removeDynamicItem('${field}', '${item}')">×</button>
             `;
@@ -303,67 +467,121 @@ function renderDynamicList(field, obj) {
     container.appendChild(addBtn);
 }
 
+function validateAndSetKey(field, oldKey, inputElem) {
+    const newKey = inputElem.value;
+    // Check against DB items
+    if (!DB.items[newKey] && newKey !== "New Item") {
+        alert("Invalid Item! Please select a valid item from the list.");
+        inputElem.value = oldKey; // Revert
+        return;
+    }
+    updateDynamicKey(field, oldKey, newKey);
+}
+
 function updateDynamicVal(field, key, val) {
-    const recipe = DB.recipes.find(r => r.id === currentDbSelection.key);
-    if (recipe && recipe[field]) {
-        recipe[field][key] = parseFloat(val) || 0;
+    let targetObj = null;
+    if (currentDbSelection.type === 'recipe') targetObj = DB.recipes.find(r => r.id === currentDbSelection.key);
+    if (currentDbSelection.type === 'machine') targetObj = DB.machines[currentDbSelection.key];
+
+    if (targetObj && targetObj[field]) {
+        targetObj[field][key] = parseFloat(val) || 0;
+        updateSnippetView();
     }
 }
 
 function updateDynamicKey(field, oldKey, newKey) {
-    const recipe = DB.recipes.find(r => r.id === currentDbSelection.key);
-    if (recipe && recipe[field]) {
-        const val = recipe[field][oldKey];
-        delete recipe[field][oldKey];
-        recipe[field][newKey] = val;
-        renderDynamicList(field, recipe[field]);
+    let targetObj = null;
+    if (currentDbSelection.type === 'recipe') targetObj = DB.recipes.find(r => r.id === currentDbSelection.key);
+    if (currentDbSelection.type === 'machine') targetObj = DB.machines[currentDbSelection.key];
+
+    if (targetObj && targetObj[field]) {
+        const val = targetObj[field][oldKey];
+        delete targetObj[field][oldKey];
+        targetObj[field][newKey] = val;
+        renderDynamicList(field, targetObj[field]);
+        updateSnippetView();
     }
 }
 
 function removeDynamicItem(field, key) {
-    const recipe = DB.recipes.find(r => r.id === currentDbSelection.key);
-    if (recipe && recipe[field]) {
-        delete recipe[field][key];
-        renderDynamicList(field, recipe[field]);
+    let targetObj = null;
+    if (currentDbSelection.type === 'recipe') targetObj = DB.recipes.find(r => r.id === currentDbSelection.key);
+    if (currentDbSelection.type === 'machine') targetObj = DB.machines[currentDbSelection.key];
+
+    if (targetObj && targetObj[field]) {
+        delete targetObj[field][key];
+        renderDynamicList(field, targetObj[field]);
+        updateSnippetView();
     }
 }
 
 function addDynamicItem(field) {
-    const recipe = DB.recipes.find(r => r.id === currentDbSelection.key);
-    if (recipe) {
-        if (!recipe[field]) recipe[field] = {};
-        recipe[field]["New Item"] = 1;
-        renderDynamicList(field, recipe[field]);
+    let targetObj = null;
+    if (currentDbSelection.type === 'recipe') targetObj = DB.recipes.find(r => r.id === currentDbSelection.key);
+    if (currentDbSelection.type === 'machine') targetObj = DB.machines[currentDbSelection.key];
+
+    if (targetObj) {
+        if (!targetObj[field]) targetObj[field] = {};
+        // Find unique name
+        let name = "New Item";
+        let counter = 1;
+        while(targetObj[field][name]) { name = "New Item " + counter++; }
+        
+        targetObj[field][name] = 1;
+        renderDynamicList(field, targetObj[field]);
+        updateSnippetView();
     }
 }
 
-function toggleSourceView() {
-    isSourceView = !isSourceView;
-    const btn = document.getElementById('btn-source-toggle');
-    const area = document.getElementById('db-editor-area');
-    const textArea = document.getElementById('json-editor');
+// --- FULL SOURCE EDITING ---
+function toggleFullSourceMode() {
+    const visualWrapper = document.getElementById('visual-editor-wrapper');
+    const sourceWrapper = document.getElementById('full-source-wrapper');
+    const btnRaw = document.getElementById('btn-raw-mode');
+    const btnReport = document.getElementById('btn-report-issue');
+    const title = document.getElementById('db-editor-title');
 
-    if (isSourceView) {
-        btn.classList.add('active');
-        btn.innerText = "Hide Source";
-        area.classList.add('source-active');
-        // Generate Source
-        textArea.value = generateDbString();
+    if (sourceWrapper.style.display === 'none') {
+        // Switch to Source
+        visualWrapper.style.display = 'none';
+        sourceWrapper.style.display = 'flex';
+        btnRaw.style.display = 'none'; // Hide button inside logic, show cancel instead
+        btnReport.style.display = 'none';
+        title.innerText = "Editing Full Database Source";
+        
+        // Populate text area
+        document.getElementById('json-editor').value = `window.ALCHEMY_DB = ${JSON.stringify(DB, null, 4)};`;
+        currentDbSelection = null; // Clear selection visual
+        filterDbList(); // Remove highlighting
     } else {
-        btn.classList.remove('active');
-        btn.innerText = "View Source JSON";
-        area.classList.remove('source-active');
-        // If they edited the text area manually, try to parse it back
-        try {
-            const txt = textArea.value;
-            // Simple validation before eval
-            if (txt.includes("window.ALCHEMY_DB")) {
-                 eval(txt);
-                 DB = window.ALCHEMY_DB;
-                 initDbEditor(); // Refresh visuals
-            }
-        } catch(e) { console.error("Could not parse source view edits"); }
+        // Cancel/Back
+        sourceWrapper.style.display = 'none';
+        visualWrapper.style.display = 'block';
+        btnRaw.style.display = 'inline-block';
+        title.innerText = "Select an Item...";
+        document.getElementById('db-form-container').innerHTML = `<div style="color:#666; font-style:italic; text-align:center; margin-top:50px;">Select an item from the sidebar to edit.</div>`;
+        document.getElementById('snippet-container').style.display = 'none';
     }
+}
+
+function saveFullSource() {
+    const txt = document.getElementById('json-editor').value;
+    try {
+        if (txt.includes("window.ALCHEMY_DB")) {
+             eval(txt);
+             DB = window.ALCHEMY_DB;
+             
+             // Save and Refresh UI
+             localStorage.setItem(SOURCE_KEY, txt);
+             persist();
+             alert("Database Updated from Raw Source!");
+             
+             initDbEditor();
+             toggleFullSourceMode(); // Return to visual view
+        } else {
+            throw new Error("Missing 'window.ALCHEMY_DB =' assignment.");
+        }
+    } catch(e) { alert("Syntax Error: " + e.message); }
 }
 
 function generateDbString() {
@@ -380,6 +598,7 @@ function reportGithubIssue() {
     let dataStr = "";
     
     if (type === 'item') dataStr = JSON.stringify(DB.items[key], null, 4);
+    else if (type === 'machine') dataStr = JSON.stringify(DB.machines[key], null, 4);
     else dataStr = JSON.stringify(DB.recipes.find(r => r.id === key), null, 4);
     
     const title = encodeURIComponent(`[Data Error] ${key}`);
@@ -393,27 +612,19 @@ function reportGithubIssue() {
    SECTION: DATA MANAGEMENT (Save/Export)
    ========================================================================== */
 function applyChanges() {
-    // Save to local storage
-    if (isSourceView) {
-        const txt = document.getElementById('json-editor').value;
-        try { 
-            eval(txt); 
-            DB = window.ALCHEMY_DB; 
-            localStorage.setItem(SOURCE_KEY, txt);
-            persist();
-            alert("Applied!"); 
-            initDbEditor();
-        } catch(e) { alert("Syntax Error: " + e.message); }
-    } else {
-        const txt = generateDbString();
-        localStorage.setItem(SOURCE_KEY, txt);
-        persist();
-        alert("Changes Saved Locally!");
-    }
+    // Save current DB object to local storage
+    const txt = generateDbString();
+    localStorage.setItem(SOURCE_KEY, txt);
+    persist();
+    
+    // REFRESH UI: Rebuild the flat list so the sidebar updates (e.g. showing "Tier: 1")
+    initDbEditor();
+    
+    alert("Changes Saved Locally!");
 }
 
 function exportData() {
-    const txt = isSourceView ? document.getElementById('json-editor').value : generateDbString(); 
+    const txt = generateDbString(); 
     const blob = new Blob([txt], { type: "text/javascript" });
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = "alchemy_db.js"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
@@ -558,7 +769,7 @@ function updateDefaultButtonState() {
 function saveSettings() { ['lvlBelt','lvlSpeed','lvlAlchemy','lvlFuel','lvlFert'].forEach(k => { DB.settings[k] = parseInt(document.getElementById(k).value) || 0; }); persist(); alert("Settings Saved!"); }
 function resetToDefault() { if(confirm("Factory Reset?")) { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(SOURCE_KEY); location.reload(); } }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-function showChangelog() { document.getElementById('changelog-modal').style.display = 'flex'; }
+
 function adjustInput(id, delta) { const el = document.getElementById(id); let val = parseInt(el.value) || 0; el.value = Math.max(0, val + delta); }
 function adjustRate(delta) { 
     const el = document.getElementById('targetRate'); 
@@ -687,7 +898,7 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
     }
     document.getElementById('summary-container').innerHTML = `
         <div class="summary-box">
-            <div class="stat-block"><span class="stat-label">Net Output</span><span class="stat-value ${p.targetRate >= 0 ? 'net-positive' : 'net-warning'}">${p.targetRate.toFixed(1)} / min</span>${deductionText.length > 0 ? `<span class="stat-sub" style="font-size:0.75em">${deductionText.join('<br>')}</span>` : ''}</div>
+            <div class="stat-block"><span class="stat-label">Net Output</span><span class="stat-value ${p.targetRate >= 0 ? 'net-positive' : 'net-warning'}">${p.targetRate.toFixed(1)} / min</span>${deductionText.length > 0 ? `<span class=\"stat-sub\" style=\"font-size:0.75em\">${deductionText.join('<br>')}</span>` : ''}</div>
             <div class="stat-block"><span class="stat-label">Internal Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: ${internalHeat.toFixed(1)} P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: ${formatVal(internalBio)} V/s</span></div>
             <div class="stat-block"><span class="stat-label">External Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: ${externalHeat.toFixed(1)} P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: ${formatVal(externalBio)} V/s</span></div>
             ${profitHtml}

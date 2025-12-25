@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alchemy Factory Planner v95</title>
+    <title>Alchemy Factory Planner</title>
     
     <!-- Core Styling -->
     <link rel="stylesheet" href="style.css">
@@ -18,33 +18,20 @@
         <div style="display:flex; align-items:baseline;">
             <h1>Alchemy Factory Planner</h1>
             <span style="margin-left: 20px;">
+                <!-- Updated: Version/Changelog first, then GitHub Repo -->
+                <span class="subtitle changelog-link" style="cursor: pointer; margin-right: 15px;">
+                    <span class="app-version">Loading...</span> | View Changelog
+                </span>
                 <a href="https://github.com/JoeJoesGit/AlchemyFactoryCalculator" target="_blank" class="repo-link">GitHub Repo</a>
-                <span class="subtitle" onclick="showChangelog()">v95 | View Changelog</span>
             </span>
         </div>
         <div class="tabs">
             <div class="tab-btn active" onclick="switchTab('calc')">Calculator</div>
-            <div class="tab-btn" onclick="switchTab('db')">Database Editor</div>
+            <div class="tab-btn" onclick="switchTab('db')">Recipe Database</div>
         </div>
     </header>
 
     <main>
-        <!-- Changelog Modal -->
-        <div id="changelog-modal" class="modal-overlay">
-            <div class="modal-content">
-                <div class="modal-header"><h2>Changelog</h2><button class="close-modal" onclick="closeModal('changelog-modal')">&times;</button></div>
-                <div style="line-height:1.6; color:#ccc;">
-                    <strong>v95 - Stability & Math Overhaul</strong><br>
-                    - <strong>Critical Fix:</strong> Stone Furnaces now pool slots globally across the factory (e.g., 23 Crucibles correctly ask for 8 Furnaces).<br>
-                    - <strong>Fix:</strong> Summary Box "Gross/Use" logic is now accurate.<br>
-                    - <strong>Fix:</strong> Internal Modules (Heat/Nutrients) now correctly contribute to Global Load stats.<br>
-                    - <strong>Fix:</strong> Selecting a new item now auto-resets the Target Rate to match Belt settings.<br>
-                    - <strong>Logic:</strong> Construction List "Min" now assumes merging identical outputs; "Max" counts physical nodes.<br><br>
-                    <a href="https://github.com/JoeJoesGit/AlchemyFactoryCalculator/blob/main/CHANGELOG.md" target="_blank" style="color:var(--accent);">View Full History on GitHub</a>
-                </div>
-            </div>
-        </div>
-
         <!-- Recipe Selection Modal -->
         <div id="recipe-modal" class="modal-overlay">
             <div class="modal-content">
@@ -196,10 +183,16 @@
         <!-- View: Database Editor (Updated) -->
         <div id="view-db" class="view">
             <div class="db-container">
-                <!-- Sidebar with Search -->
+                <!-- Sidebar with Search & Filters -->
                 <div class="db-sidebar">
+                    <div class="db-filters">
+                        <button class="filter-btn active" onclick="setDbFilter('all')">All</button>
+                        <button class="filter-btn" onclick="setDbFilter('item')">Items</button>
+                        <button class="filter-btn" onclick="setDbFilter('recipe')">Recipes</button>
+                        <button class="filter-btn" onclick="setDbFilter('machine')">Machines</button>
+                    </div>
                     <div class="db-search">
-                        <input type="text" id="db-search-input" placeholder="Search Items & Recipes..." oninput="filterDbList()">
+                        <input type="text" id="db-search-input" placeholder="Search..." oninput="filterDbList()">
                     </div>
                     <div id="db-list" class="db-list"></div>
                 </div>
@@ -209,21 +202,37 @@
                     <div class="db-header">
                         <div class="db-title" id="db-editor-title">Select an Item...</div>
                         <div class="db-controls">
-                            <button class="split-btn" onclick="toggleSourceView()" id="btn-source-toggle">View Source JSON</button>
+                            <button class="split-btn btn-inactive-red" onclick="toggleFullSourceMode()" id="btn-raw-mode" style="border-color:#d32f2f;">Edit Full Source</button>
                             <button class="split-btn btn-inactive-red" onclick="reportGithubIssue()" id="btn-report-issue" style="display:none; color:white !important; border-color:#d32f2f;">Report Issue</button>
                         </div>
                     </div>
 
-                    <div id="db-form-container" class="db-form-container">
-                        <!-- Dynamic Form Injected Here -->
-                        <div style="color:#666; font-style:italic; text-align:center; margin-top:50px;">Select an item from the sidebar to edit.</div>
+                    <!-- Visual Editor Wrapper -->
+                    <div id="visual-editor-wrapper">
+                        <div id="db-form-container" class="db-form-container">
+                            <!-- Dynamic Form Injected Here -->
+                            <div style="color:#666; font-style:italic; text-align:center; margin-top:50px;">Select an item from the sidebar to edit.</div>
+                        </div>
+                        
+                        <!-- Snippet Preview -->
+                        <div id="snippet-container" style="display:none; margin-top:20px;">
+                            <div style="color:#888; font-size:0.85em; margin-bottom:5px; font-family:monospace;">LIVE PREVIEW (Source Snippet)</div>
+                            <textarea id="json-snippet" readonly></textarea>
+                        </div>
+
+                        <div style="margin-top:20px; border-top:1px solid #444; padding-top:15px; display:flex; gap:10px;">
+                            <button class="save-btn" onclick="applyChanges()" style="margin:0;">Apply Changes (Local)</button>
+                            <button class="info" onclick="exportData()" style="padding:10px; background:var(--info); border:none; color:white; border-radius:4px; font-weight:bold; cursor:pointer;">Export to File</button>
+                        </div>
                     </div>
 
-                    <textarea id="json-editor"></textarea>
-                    
-                    <div style="margin-top:20px; border-top:1px solid #444; padding-top:15px; display:flex; gap:10px;">
-                        <button class="save-btn" onclick="applyChanges()" style="margin:0;">Apply Changes (Local)</button>
-                        <button class="info" onclick="exportData()" style="padding:10px; background:var(--info); border:none; color:white; border-radius:4px; font-weight:bold; cursor:pointer;">Export to File</button>
+                    <!-- Full Source Editor (Hidden by default) -->
+                    <div id="full-source-wrapper" style="display:none; height:100%; flex-direction:column;">
+                        <textarea id="json-editor"></textarea>
+                        <div style="margin-top:10px; display:flex; gap:10px;">
+                            <button class="save-btn" onclick="saveFullSource()" style="margin:0;">Save & Reload DB</button>
+                            <button class="reset-btn" onclick="toggleFullSourceMode()" style="margin:0; border-color:#aaa; color:#aaa;">Cancel</button>
+                        </div>
                     </div>
                 </div>
             </div>
