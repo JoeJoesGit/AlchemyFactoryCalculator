@@ -4,9 +4,23 @@
    ========================================================================== */
 
 let DB = null;
-const APP_VERSION = "v96"; // Single source of truth for Version
-const STORAGE_KEY = "alchemy_factory_save_v1";
-const SOURCE_KEY = "alchemy_source_v1";
+const APP_VERSION = "v96"; // UI Version
+const OLD_STORAGE_KEY = "alchemy_factory_save_v1"; // Deprecated key
+const SETTINGS_KEY = "alchemy_settings_v1";        // User Prefs (Belt level, etc)
+const CUSTOM_DB_KEY = "alchemy_custom_db_v1";      // Custom Recipe Data
+
+// NEW: Hardcoded Factory Defaults (Moved out of alchemy_db.js)
+const DEFAULT_SETTINGS = {
+    lvlBelt: 0,
+    lvlSpeed: 0,
+    lvlAlchemy: 0,
+    lvlFuel: 0,
+    lvlFert: 0,
+    defaultFuel: "Plank",
+    defaultFert: "Basic Fertilizer",
+    preferredRecipes: {},
+    activeRecyclers: {}
+};
 
 let isSelfFuel = false;
 let isSelfFert = false;
@@ -14,71 +28,94 @@ let allItemsList = [];
 let currentFocus = -1;
 
 // DB Editor State
-let currentDbSelection = null; // { type: 'item'|'recipe'|'machine', key: 'id' }
-let dbFlatList = []; // Cache for search
-let currentFilter = 'all'; // 'all', 'item', 'recipe', 'machine'
+let currentDbSelection = null; 
+let dbFlatList = []; 
+let currentFilter = 'all'; 
 
 function init() {
-    const localData = localStorage.getItem(STORAGE_KEY);
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlItem = urlParams.get('item');
-    const urlRate = urlParams.get('rate');
+    initHeader(); // Set title and version
+    
+    // 1. CLEANUP OLD DATA
+    if (localStorage.getItem(OLD_STORAGE_KEY)) {
+        console.log("Detected legacy save data. Wiping for v96 architecture migration.");
+        localStorage.removeItem(OLD_STORAGE_KEY);
+    }
 
-    // Initialize Header (Title, Version, Changelog link)
-    initHeader();
-
-    if (window.ALCHEMY_DB) {
-        let localVersion = 0;
-        if (localData) {
-            try {
-                const parsed = JSON.parse(localData);
-                localVersion = parsed.version || 0;
-            } catch(e) {}
-        }
-        
-        const fileVersion = window.ALCHEMY_DB.version || 0;
-        
-        if (fileVersion > localVersion) {
-            console.log(`Auto-Updating DB: v${localVersion} -> v${fileVersion}`);
-            const oldSettings = (JSON.parse(localData || '{}')).settings || {};
-            DB = JSON.parse(JSON.stringify(window.ALCHEMY_DB));
-            if(oldSettings.beltLevel !== undefined) DB.settings = oldSettings;
-            persist();
-        } else if (localData) {
-            try { 
-                DB = JSON.parse(localData); 
-                if (!DB.recipes || !DB.recipes[0].id) throw new Error("Invalid DB");
-            } catch(e) {
-                DB = JSON.parse(JSON.stringify(window.ALCHEMY_DB));
-                persist();
+    // 2. LOAD DATABASE (Reference vs Custom)
+    const officialDB = window.ALCHEMY_DB; // From alchemy_db.js
+    const customDBStr = localStorage.getItem(CUSTOM_DB_KEY);
+    
+    if (customDBStr) {
+        try {
+            const customDB = JSON.parse(customDBStr);
+            DB = customDB;
+            
+            // CHECK FOR UPDATES
+            const offTime = officialDB.timestamp || "1970-01-01";
+            const custTime = customDB.timestamp || "1970-01-01";
+            
+            if (offTime > custTime) {
+                showUpdateNotification();
+            } else {
+                console.log("Custom DB is up to date (or newer) than Official.");
             }
-        } else {
-            DB = JSON.parse(JSON.stringify(window.ALCHEMY_DB));
-            persist();
+            
+        } catch(e) {
+            console.error("Failed to load custom DB, reverting to official.", e);
+            DB = JSON.parse(JSON.stringify(officialDB));
         }
     } else {
-        if(localData) {
-            try { DB = JSON.parse(localData); } catch(e) { alert("Database Error"); }
-        } else {
-            alert("Error: alchemy_db.js not found!");
-            DB = { items: {}, recipes: [], machines: {}, settings: {} };
-        }
+        // Standard User: Load Official
+        DB = JSON.parse(JSON.stringify(officialDB));
     }
     
-    if(!DB.items) DB.items = {};
-    if(!DB.settings) DB.settings = {};
-    if(!DB.settings.preferredRecipes) DB.settings.preferredRecipes = {};
+    // 3. LOAD SETTINGS (Overlay)
+    // Apply user preferences on top of the loaded DB
+    const savedSettings = localStorage.getItem(SETTINGS_KEY);
     
+    // Initialize structure if missing
+    if(!DB.items) DB.items = {};
+    
+    // UPDATED: Use DEFAULT_SETTINGS if DB has no settings (which it won't anymore)
+    if(!DB.settings) {
+        DB.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+    } else {
+        // Fallback: Ensure missing keys in DB.settings are filled by Defaults
+        // This handles cases where custom DBs might have partial settings
+        DB.settings = { ...DEFAULT_SETTINGS, ...DB.settings };
+    }
+
+    // Ensure preferredRecipes object exists
+    if(!DB.settings.preferredRecipes) DB.settings.preferredRecipes = {};
+
+    if (savedSettings) {
+        try {
+            const userSettings = JSON.parse(savedSettings);
+            // Overlay known settings fields
+            ['lvlBelt', 'lvlSpeed', 'lvlAlchemy', 'lvlFuel', 'lvlFert', 'defaultFuel', 'defaultFert', 'preferredRecipes', 'activeRecyclers'].forEach(key => {
+                if (userSettings[key] !== undefined) {
+                    DB.settings[key] = userSettings[key];
+                }
+            });
+        } catch(e) {
+            console.error("Error loading settings", e);
+        }
+    }
+
+    // Global variables sync
     if(DB.settings.activeRecyclers) {
         activeRecyclers = DB.settings.activeRecyclers;
     }
+
+    // 4. UI INITIALIZATION
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlItem = urlParams.get('item');
+    const urlRate = urlParams.get('rate');
 
     prepareComboboxData();
     populateSelects(); 
     loadSettingsToUI();
     renderSlider(); 
-    
-    // Create hidden datalist for smart inputs
     createDataList();
 
     if (urlItem && urlRate) {
@@ -96,43 +133,101 @@ function init() {
 }
 
 function initHeader() {
-    // 1. Update Browser Title
-    document.title = `Alchemy Factory Calculator - ${APP_VERSION}`;
-
-    // 2. Update Version Displays (looks for elements with class 'app-version')
+    document.title = `Alchemy Factory Planner - ${APP_VERSION}`;
     const verEls = document.querySelectorAll('.app-version');
     verEls.forEach(el => el.innerText = APP_VERSION);
-
-    // 3. Configure Changelog Links (looks for elements with class 'changelog-link')
-    // Uses a relative path so it works in /Beta/ folder or Root folder equally well
     const clLinks = document.querySelectorAll('.changelog-link');
     clLinks.forEach(el => {
         if (el.tagName === 'A') {
             el.href = "CHANGELOG.md";
             el.target = "_blank";
         } else {
-            // If it's a button or other element
             el.onclick = () => window.open("CHANGELOG.md", "_blank");
         }
     });
 }
 
-function createDataList() {
-    const listId = "all-items-list";
-    let dl = document.getElementById(listId);
-    if (!dl) {
-        dl = document.createElement('datalist');
-        dl.id = listId;
-        document.body.appendChild(dl);
-    }
-    dl.innerHTML = '';
+function showUpdateNotification() {
+    const banner = document.getElementById('update-banner');
+    if (banner) banner.style.display = 'flex';
+}
+
+function hideUpdateNotification() {
+    const banner = document.getElementById('update-banner');
+    if (banner) banner.style.display = 'none';
+}
+
+/* ==========================================================================
+   SECTION: DATA MANAGEMENT (Persist & Reset)
+   ========================================================================== */
+
+function persist() { 
+    // We now ONLY save settings to the settings key.
+    // We do NOT save the whole DB here.
     
-    // Populate with Items
-    Object.keys(DB.items).sort().forEach(item => {
-        const opt = document.createElement('option');
-        opt.value = item;
-        dl.appendChild(opt);
-    });
+    const settingsObj = {
+        lvlBelt: parseInt(document.getElementById('lvlBelt').value) || 0,
+        lvlSpeed: parseInt(document.getElementById('lvlSpeed').value) || 0,
+        lvlAlchemy: parseInt(document.getElementById('lvlAlchemy').value) || 0,
+        lvlFuel: parseInt(document.getElementById('lvlFuel').value) || 0,
+        lvlFert: parseInt(document.getElementById('lvlFert').value) || 0,
+        defaultFuel: DB.settings.defaultFuel,
+        defaultFert: DB.settings.defaultFert,
+        preferredRecipes: DB.settings.preferredRecipes,
+        activeRecyclers: activeRecyclers
+    };
+
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settingsObj));
+    
+    // Note: We also update the in-memory DB object so calculations work immediately
+    DB.settings = { ...DB.settings, ...settingsObj };
+}
+
+function applyChanges() {
+    // This function is for the DATABASE EDITOR
+    // It saves the modified DB to the CUSTOM KEY
+    const txt = generateDbString();
+    
+    // We strictly save the JSON object, not the window assignment string for local storage
+    // But for consistency with the "Edit Source" view which expects the assignment...
+    // Let's just strip the assignment for storage logic if needed, or keep using eval.
+    // Actually, `init` logic expects to parse JSON from storage.
+    
+    // Let's rely on `DB` object being current.
+    localStorage.setItem(CUSTOM_DB_KEY, JSON.stringify(DB));
+    
+    // Update Source Key for text editor persistence
+    localStorage.setItem("alchemy_source_v1", txt); 
+    
+    initDbEditor();
+    alert("Custom Database Saved! You are now using a local version.");
+}
+
+// 1. Factory Reset (Wipe All)
+function resetFactory() { 
+    if(confirm("FULL RESET: This will wipe your Settings AND your Custom Database. Continue?")) { 
+        localStorage.removeItem(SETTINGS_KEY); 
+        localStorage.removeItem(CUSTOM_DB_KEY); 
+        localStorage.removeItem("alchemy_source_v1");
+        location.reload(); 
+    } 
+}
+
+// 2. Reset Settings Only
+function resetSettings() {
+    if(confirm("Reset Upgrade Levels and Logistics preferences to default? (Recipes will stay)")) {
+        localStorage.removeItem(SETTINGS_KEY);
+        location.reload();
+    }
+}
+
+// 3. Reset Recipes Only (Update/Revert)
+function resetRecipes() {
+    if(confirm("Discard custom recipes and revert to the Official Database?")) {
+        localStorage.removeItem(CUSTOM_DB_KEY);
+        localStorage.removeItem("alchemy_source_v1");
+        location.reload();
+    }
 }
 
 /* ==========================================================================
@@ -571,13 +666,9 @@ function saveFullSource() {
              eval(txt);
              DB = window.ALCHEMY_DB;
              
-             // Save and Refresh UI
-             localStorage.setItem(SOURCE_KEY, txt);
-             persist();
-             alert("Database Updated from Raw Source!");
-             
-             initDbEditor();
-             toggleFullSourceMode(); // Return to visual view
+             // Save to CUSTOM DB KEY since user modified source
+             applyChanges(); 
+             toggleFullSourceMode(); 
         } else {
             throw new Error("Missing 'window.ALCHEMY_DB =' assignment.");
         }
@@ -611,17 +702,6 @@ function reportGithubIssue() {
 /* ==========================================================================
    SECTION: DATA MANAGEMENT (Save/Export)
    ========================================================================== */
-function applyChanges() {
-    // Save current DB object to local storage
-    const txt = generateDbString();
-    localStorage.setItem(SOURCE_KEY, txt);
-    persist();
-    
-    // REFRESH UI: Rebuild the flat list so the sidebar updates (e.g. showing "Tier: 1")
-    initDbEditor();
-    
-    alert("Changes Saved Locally!");
-}
 
 function exportData() {
     const txt = generateDbString(); 
@@ -629,9 +709,9 @@ function exportData() {
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = "alchemy_db.js"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
-function persist() { 
-    DB.settings.activeRecyclers = activeRecyclers;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); 
+function saveSettings() {
+    persist();
+    alert("Settings Saved!");
 }
 
 /* ==========================================================================
@@ -766,8 +846,7 @@ function updateDefaultButtonState() {
     const btnFert = document.getElementById('btnDefFert');
     if(curFert === defFert) { btnFert.disabled = true; btnFert.innerText = "Current Default"; } else { btnFert.disabled = false; btnFert.innerText = "Make Default"; }
 }
-function saveSettings() { ['lvlBelt','lvlSpeed','lvlAlchemy','lvlFuel','lvlFert'].forEach(k => { DB.settings[k] = parseInt(document.getElementById(k).value) || 0; }); persist(); alert("Settings Saved!"); }
-function resetToDefault() { if(confirm("Factory Reset?")) { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(SOURCE_KEY); location.reload(); } }
+
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
 function adjustInput(id, delta) { const el = document.getElementById(id); let val = parseInt(el.value) || 0; el.value = Math.max(0, val + delta); }

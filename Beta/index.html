@@ -14,6 +14,13 @@
 </head>
 <body>
 
+    <!-- Notification Banner (Hidden by Default) -->
+    <div id="update-banner" style="display:none; background:#2e7d32; color:white; padding:10px; text-align:center; justify-content:center; align-items:center; gap:15px; font-weight:bold;">
+        <span>New official recipe update available! Your custom database is outdated.</span>
+        <button onclick="resetRecipes()" style="background:white; color:#2e7d32; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold;">Update & Overwrite</button>
+        <button onclick="hideUpdateNotification()" style="background:transparent; color:white; border:1px solid white; padding:5px 10px; border-radius:4px; cursor:pointer;">Ignore</button>
+    </div>
+
     <header>
         <div style="display:flex; align-items:baseline;">
             <h1>Alchemy Factory Planner</h1>
@@ -172,8 +179,12 @@
                     <div class="panel">
                         <h3>Save/Reset</h3>
                         <button class="save-btn" onclick="saveSettings()">Save Upgrades</button>
-                        <div style="text-align:center; margin-top:15px;">
-                            <button class="reset-btn" onclick="resetToDefault()">Factory Reset</button>
+                        
+                        <!-- Updated Reset Actions -->
+                        <div style="display:flex; flex-direction:column; gap:8px; margin-top:15px;">
+                            <button class="reset-btn" onclick="resetSettings()">Reset Settings Only</button>
+                            <button class="reset-btn" onclick="resetRecipes()">Reset Recipes Only</button>
+                            <button class="reset-btn" style="background:#444; color:#fff;" onclick="resetFactory()">FULL FACTORY RESET</button>
                         </div>
                     </div>
                 </div>
