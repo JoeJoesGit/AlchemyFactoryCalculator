@@ -1,5 +1,5 @@
 window.ALCHEMY_DB = {
-    "timestamp": "2025-12-24T20:20:00", // Updated for Hybrid Panacea
+    "timestamp": "2025-12-25T11:40:00", // Updated for Hybrid Panacea
     "items": {
         // --- 1. RAW RESOURCES ---
         "Logs": { "category": "Raw Materials", "buyPrice": 200, "heat": 2000 },
@@ -136,8 +136,8 @@ window.ALCHEMY_DB = {
         "Panacea Potion": { "category": "Fuel / Fertilizer", "sellPrice": 30000, "heat": 320000, "nutrientValue": 200000, "maxFertility": 20000 },
         
         // --- 12. FERTILIZERS & CATALYSTS ---
-        "Basic Fertilizer": { "category": "Fertilizer", "nutrientValue": 144, "maxFertility": 12 },
-        "Advanced Fertilizer": { "category": "Fertilizer", "nutrientValue": 720, "maxFertility": 144 },
+        "Basic Fertilizer": { "category": "Fertilizer", "nutrientValue": 144, "maxFertility": 12, "buyPrice": 14 },
+        "Advanced Fertilizer": { "category": "Fertilizer", "nutrientValue": 720, "maxFertility": 144, "buyPrice": 60 },
         
         "Oblivion Essence": { "category": "Essence" },
         "Vitality Essence": { "category": "Essence" },
@@ -176,38 +176,38 @@ window.ALCHEMY_DB = {
     },
     
     "machines": {
-        "Table Saw": { "heatCost": 0, "buildCost": { "Plank": 5 } },
-        "Stone Crusher": { "heatCost": 0, "buildCost": { "Plank": 6, "Large Wooden Gear": 6 } },
-        "Planting": { "heatCost": 0, "buildCost": { "Stone": 8 } },
-        "Grinder": { "heatCost": 0, "buildCost": { "Plank": 8 } },
-        "Extractor": { "heatCost": 0, "buildCost": { "Iron Ingot": 5, "Glass": 5 } },
-        "Stone Furnace": { "tier": 1, "heatSelf": 1, "slots": 9, "isGenerator": true, "buildCost": { "Stone": 20 } }, 
-        "Blast Furnace": { "tier": 2, "heatSelf": 4.0, "slots": 42, "isGenerator": true, "buildCost": { "Brick": 30 } }, 
-        "Crucible": { "tier": 1, "heatCost": 4.0, "parent": "Stone Furnace", "slotsRequired": 3, "buildCost": { "Stone": 4 } },
-        "Kiln": { "tier": 1, "heatCost": 15.0, "parent": "Stone Furnace", "slotsRequired": 6, "buildCost": { "Stone": 20, "Clay": 10 } },
-        "Iron Smelter": { "tier": 1, "heatCost": 9.0, "parent": "Stone Furnace", "slotsRequired": 9, "buildCost": { "Stone": 15 } },
-        "Stackable Crucible": { "tier": 2, "heatCost": 6.0, "parent": "Stone Furnace", "slotsRequired": 3, "buildCost": { "Clay": 10, "Iron Ingot": 2 } },
-        "Thermal Extractor": { "tier": 2, "heatCost": 80.0, "parent": "Stone Furnace", "slotsRequired": 6, "buildCost": { "Steel Ingot": 10, "Glass": 10 } },
-        "Refiner": { "tier": 2, "heatCost": 0, "buildCost": { "Iron Ingot": 10, "Glass": 5 } },
-        "Processor": { "tier": 1, "heatCost": 0, "buildCost": { "Plank": 12, "Large Wooden Gear": 3 } },
-        "Assembler": { "tier": 1, "heatCost": 0, "buildCost": { "Plank": 10, "Large Wooden Gear": 5, "Small Wooden Gear": 15 } },
-        "Advanced Assembler": { "tier": 3, "heatCost": 0, "buildCost": { "Steel Ingot": 12, "Steel Gear": 16, "Copper Bearing": 8 } },
-        "Blender": { "tier": 1, "heatCost": 0, "buildCost": { "Iron Ingot": 8, "Glass": 8 } },
-        "Advanced Blender": { "tier": 3, "heatCost": 0, "buildCost": { "Steel Ingot": 8, "Glass": 16, "Copper Bearing": 4 } },
-        "Alembic": { "tier": 2, "heatCost": 108.0, "parent": "Stone Furnace", "slotsRequired": 1, "buildCost": { "Steel Ingot": 4, "Copper Ingot": 4, "Glass": 8 } },
-        "Advanced Alembic": { "tier": 3, "heatCost": 270.0, "parent": "Stone Furnace", "slotsRequired": 6, "buildCost": { "Steel Ingot": 8, "Copper Bearing": 4, "Glass": 16 } },
-        "Athanor": { "tier": 2, "heatCost": 32.0, "parent": "Stone Furnace", "slotsRequired": 6, "buildCost": { "Iron Nails": 15, "Iron Ingot": 10 } },
-        "Advanced Athanor": { "tier": 3, "heatCost": 360.0, "parent": "Stone Furnace", "slotsRequired": 6, "buildCost": { "Steel Ingot": 20, "Gold Ingot": 5 } },
-        "Shaper": { "tier": 2, "heatCost": 0, "buildCost": { "Iron Ingot": 8, "Iron Ingot": 16 } },
-        "Advanced Shaper": { "tier": 3, "heatCost": 0, "buildCost": { "Steel Ingot": 8, "Steel Gear": 16 } },
-        "Arcane Shaper": { "tier": 4, "heatCost": 0, "buildCost": { "Gold Ingot": 12, "Copper Bearing": 18, "Steel Gear": 24 } },
-        "Paradox Crucible": { "tier": 3, "heatCost": 1200.0, "parent": "Stone Furnace", "slotsRequired": 9, "buildCost": { "Bronze Rivet": 16, "Copper Ingot": 8, "Steel Ingot": 8 } },
-        "Cauldron": { "tier": 3, "heatCost": 0, "buildCost": { "Bronze Ingot": 30 } },
-        "Arcane Processor": { "tier": 4, "heatCost": 0, "buildCost": { "Steel Ingot": 6, "Steel Gear": 12, "Lapis Lazuli": 2 } },
-        "Enhanced Grinder": { "tier": 3, "heatCost": 0, "buildCost": { "Plank": 12, "Steel Gear": 3 } },
-        "Nursery": { "tier": 1, "heatCost": 0, "fertility": true, "buildCost": { "Plank": 20, "Linen Rope": 20, "Iron Nails": 20 } },
-        "World Tree Nursery": { "tier": 4, "heatCost": 0, "buildCost": { "Adamant": 10, "World Tree Leaf": 5 } },
-        "Knowledge Altar": { "tier": 4, "heatCost": 0, "buildCost": { "Stone": 50, "Gold Ingot": 10 } }
+        "Table Saw": { "tier": 1, "heatCost": 0, "buildCost": { "Plank": 5 } },
+        "Stone Crusher": { "tier": 2, "heatCost": 0, "buildCost": { "Plank": 6, "Large Wooden Gear": 6 } },
+        "Planting": { "tier": 2, "heatCost": 0, "buildCost": { "Stone": 8 } },
+        "Grinder": { "tier": 1, "heatCost": 0, "buildCost": { "Plank": 8 } },
+        "Extractor": { "tier": 4, "heatCost": 0, "buildCost": { "Iron Ingot": 5, "Glass": 5 } },
+        "Stone Furnace": { "tier": 3, "heatSelf": 1, "slots": 9, "isGenerator": true, "buildCost": { "Stone": 20 } }, 
+        "Blast Furnace": { "tier": 6, "heatSelf": 4.0, "slots": 42, "isGenerator": true, "buildCost": { "Brick": 30 } }, 
+        "Crucible": { "tier": 4, "heatCost": 4.0, "parent": "Stone Furnace", "slotsRequired": 3, "buildCost": { "Stone": 4 } },
+        "Kiln": { "tier": 4, "heatCost": 15.0, "parent": "Stone Furnace", "slotsRequired": 6, "buildCost": { "Stone": 20, "Clay": 10 } },
+        "Iron Smelter": { "tier": 3, "heatCost": 9.0, "parent": "Stone Furnace", "slotsRequired": 9, "buildCost": { "Stone": 15 } },
+        "Stackable Crucible": { "tier": 6, "heatCost": 6.0, "parent": "Stone Furnace", "slotsRequired": 3, "buildCost": { "Clay": 10, "Iron Ingot": 2 } },
+        "Thermal Extractor": { "tier": 7, "heatCost": 80.0, "parent": "Stone Furnace", "slotsRequired": 6, "buildCost": { "Steel Ingot": 10, "Glass": 10 } },
+        "Refiner": { "tier": 6, "heatCost": 0, "buildCost": { "Iron Ingot": 10, "Glass": 5 } },
+        "Processor": { "tier": 2, "heatCost": 0, "buildCost": { "Plank": 12, "Large Wooden Gear": 3 } },
+        "Assembler": { "tier": 3, "heatCost": 0, "buildCost": { "Plank": 10, "Large Wooden Gear": 5, "Small Wooden Gear": 15 } },
+        "Advanced Assembler": { "tier": 6, "heatCost": 0, "buildCost": { "Steel Ingot": 12, "Steel Gear": 16, "Copper Bearing": 8 } },
+        "Blender": { "tier": 4, "heatCost": 0, "buildCost": { "Iron Ingot": 8, "Glass": 8 } },
+        "Advanced Blender": { "tier": 6, "heatCost": 0, "buildCost": { "Steel Ingot": 8, "Glass": 16, "Copper Bearing": 4 } },
+        "Alembic": { "tier": 7, "heatCost": 108.0, "parent": "Stone Furnace", "slotsRequired": 1, "buildCost": { "Steel Ingot": 4, "Copper Ingot": 4, "Glass": 8 } },
+        "Advanced Alembic": { "tier": 8, "heatCost": 270.0, "parent": "Stone Furnace", "slotsRequired": 6, "buildCost": { "Steel Ingot": 8, "Copper Bearing": 4, "Glass": 16 } },
+        "Athanor": { "tier": 5, "heatCost": 32.0, "parent": "Stone Furnace", "slotsRequired": 6, "buildCost": { "Iron Nails": 15, "Iron Ingot": 10 } },
+        "Advanced Athanor": { "tier": 8, "heatCost": 360.0, "parent": "Stone Furnace", "slotsRequired": 6, "buildCost": { "Steel Ingot": 20, "Gold Ingot": 5 } },
+        "Shaper": { "tier": 5, "heatCost": 0, "buildCost": { "Iron Ingot": 8, "Iron Ingot": 16 } },
+        "Advanced Shaper": { "tier": 7, "heatCost": 0, "buildCost": { "Steel Ingot": 8, "Steel Gear": 16 } },
+        "Arcane Shaper": { "tier": 9, "heatCost": 0, "buildCost": { "Gold Ingot": 12, "Copper Bearing": 18, "Steel Gear": 24 } },
+        "Paradox Crucible": { "tier": 7, "heatCost": 1200.0, "parent": "Stone Furnace", "slotsRequired": 9, "buildCost": { "Bronze Rivet": 16, "Copper Ingot": 8, "Steel Ingot": 8 } },
+        "Cauldron": { "tier": 6, "heatCost": 0, "buildCost": { "Bronze Ingot": 30 } },
+        "Arcane Processor": { "tier": 9, "heatCost": 0, "buildCost": { "Steel Ingot": 6, "Steel Gear": 12, "Lapis Lazuli": 2 } },
+        "Enhanced Grinder": { "tier": 6, "heatCost": 0, "buildCost": { "Plank": 12, "Steel Gear": 3 } },
+        "Nursery": { "tier": 4, "heatCost": 0, "fertility": true, "buildCost": { "Plank": 20, "Linen Rope": 20, "Iron Nails": 20 } },
+        "World Tree Nursery": { "tier": 8, "heatCost": 0, "buildCost": { "Adamant": 10, "World Tree Leaf": 5 } },
+        "Knowledge Altar": { "tier": 5, "heatCost": 0, "buildCost": { "Stone": 50, "Gold Ingot": 10 } }
     },
     
     "recipes": [
