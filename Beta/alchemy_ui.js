@@ -4,7 +4,7 @@
    ========================================================================== */
 
 let DB = null;
-const APP_VERSION = "v96"; // UI Version
+const APP_VERSION = "v97"; // UI Version
 const OLD_STORAGE_KEY = "alchemy_factory_save_v1"; // Deprecated key
 const SETTINGS_KEY = "alchemy_settings_v1";        // User Prefs (Belt level, etc)
 const CUSTOM_DB_KEY = "alchemy_custom_db_v1";      // Custom Recipe Data
@@ -76,12 +76,11 @@ function init() {
     // Initialize structure if missing
     if(!DB.items) DB.items = {};
     
-    // UPDATED: Use DEFAULT_SETTINGS if DB has no settings (which it won't anymore)
+    // UPDATED: Use DEFAULT_SETTINGS if DB has no settings
     if(!DB.settings) {
         DB.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
     } else {
         // Fallback: Ensure missing keys in DB.settings are filled by Defaults
-        // This handles cases where custom DBs might have partial settings
         DB.settings = { ...DEFAULT_SETTINGS, ...DB.settings };
     }
 
@@ -163,8 +162,6 @@ function hideUpdateNotification() {
 
 function persist() { 
     // We now ONLY save settings to the settings key.
-    // We do NOT save the whole DB here.
-    
     const settingsObj = {
         lvlBelt: parseInt(document.getElementById('lvlBelt').value) || 0,
         lvlSpeed: parseInt(document.getElementById('lvlSpeed').value) || 0,
@@ -184,26 +181,14 @@ function persist() {
 }
 
 function applyChanges() {
-    // This function is for the DATABASE EDITOR
-    // It saves the modified DB to the CUSTOM KEY
     const txt = generateDbString();
-    
-    // We strictly save the JSON object, not the window assignment string for local storage
-    // But for consistency with the "Edit Source" view which expects the assignment...
-    // Let's just strip the assignment for storage logic if needed, or keep using eval.
-    // Actually, `init` logic expects to parse JSON from storage.
-    
-    // Let's rely on `DB` object being current.
     localStorage.setItem(CUSTOM_DB_KEY, JSON.stringify(DB));
-    
-    // Update Source Key for text editor persistence
     localStorage.setItem("alchemy_source_v1", txt); 
     
     initDbEditor();
     alert("Custom Database Saved! You are now using a local version.");
 }
 
-// 1. Factory Reset (Wipe All)
 function resetFactory() { 
     if(confirm("FULL RESET: This will wipe your Settings AND your Custom Database. Continue?")) { 
         localStorage.removeItem(SETTINGS_KEY); 
@@ -213,7 +198,6 @@ function resetFactory() {
     } 
 }
 
-// 2. Reset Settings Only
 function resetSettings() {
     if(confirm("Reset Upgrade Levels and Logistics preferences to default? (Recipes will stay)")) {
         localStorage.removeItem(SETTINGS_KEY);
@@ -221,7 +205,6 @@ function resetSettings() {
     }
 }
 
-// 3. Reset Recipes Only (Update/Revert)
 function resetRecipes() {
     if(confirm("Discard custom recipes and revert to the Official Database?")) {
         localStorage.removeItem(CUSTOM_DB_KEY);
@@ -295,7 +278,6 @@ function switchTab(tabName) {
 }
 
 function initDbEditor() {
-    // Flatten DB for sidebar list
     dbFlatList = [];
     
     // Items
@@ -308,7 +290,7 @@ function initDbEditor() {
         dbFlatList.push({ type: 'recipe', key: r.id, name: r.id, machine: r.machine, ...r });
     });
 
-    // Machines (NEW)
+    // Machines
     if (DB.machines) {
         Object.keys(DB.machines).forEach(key => {
             dbFlatList.push({ type: 'machine', key: key, name: key, ...DB.machines[key] });
@@ -356,7 +338,6 @@ function filterDbList() {
         if (obj.type === 'item') subText = obj.category || '';
         if (obj.type === 'recipe') subText = obj.machine;
         
-        // Machine Logic: Show Tier if available, otherwise '?'
         if (obj.type === 'machine') {
             if (obj.tier !== undefined) {
                 subText = `Tier: ${obj.tier}`;
@@ -477,7 +458,6 @@ function renderDbForm() {
 
 function createInput(label, type, val, prop) {
     let value = val !== undefined ? val : '';
-    // Special handling for nested styling above, strip wrapping div if needed or just return string
     return `
         <div class="form-group">
             <label>${label}</label>
@@ -505,12 +485,11 @@ function toggleField(prop, checked) {
     const input = document.getElementById(`input-${prop}`);
     if (checked) {
         input.disabled = false;
-        // Set to 0 if empty
         if(input.value === "") input.value = 0;
         updateDbProperty(prop, input.value, 'number');
     } else {
         input.disabled = true;
-        updateDbProperty(prop, 0, 'number'); // Or undefined if you prefer to delete key
+        updateDbProperty(prop, 0, 'number');
     }
 }
 
@@ -519,7 +498,6 @@ function updateDbProperty(prop, val, type) {
     let finalVal = val;
     if (type === 'number') finalVal = val === '' ? undefined : parseFloat(val);
 
-    // If toggled off (value 0 for heat), we might want to delete the key to keep DB clean
     if ((prop === 'heatCost' || prop === 'heatSelf') && finalVal === 0) finalVal = undefined;
 
     if (currentDbSelection.type === 'item') {
@@ -538,6 +516,8 @@ function updateDbProperty(prop, val, type) {
     updateSnippetView();
 }
 
+// === NEW DYNAMIC LIST WITH COMBOBOXES ===
+
 function renderDynamicList(field, obj) {
     const container = document.getElementById(`list-${field}`);
     container.innerHTML = '';
@@ -546,9 +526,23 @@ function renderDynamicList(field, obj) {
         Object.keys(obj).forEach(item => {
             const row = document.createElement('div');
             row.className = 'dynamic-row';
+            
+            // Custom Combobox + Number Input + Remove Button
             row.innerHTML = `
-                <input type="text" value="${item}" list="all-items-list" placeholder="Item Name" onchange="validateAndSetKey('${field}', '${item}', this)">
-                <input type="number" value="${obj[item]}" placeholder="Qty" oninput="updateDynamicVal('${field}', '${item}', this.value)">
+                <div class="combobox-container" style="flex:1; margin-right:10px;">
+                    <div class="input-wrapper" style="width:100%; display:flex; align-items:center; position:relative;">
+                        <input type="text" value="${item}" class="real-input" style="flex-grow:1;"
+                            placeholder="Item Name"
+                            onfocus="filterRowCombo(this)"
+                            oninput="filterRowCombo(this)"
+                            onblur="setTimeout(() => this.closest('.combobox-container').querySelector('.combobox-list').style.display='none', 200)"
+                            onchange="validateAndSetKey('${field}', '${item}', this)"
+                        >
+                        <div class="combo-arrow" onclick="toggleRowCombo(this)" style="cursor:pointer; padding:0 8px;">▼</div>
+                    </div>
+                    <div class="combobox-list" style="display:none;"></div>
+                </div>
+                <input type="number" value="${obj[item]}" placeholder="Qty" style="width:70px;" oninput="updateDynamicVal('${field}', '${item}', this.value)">
                 <button class="btn-remove" onclick="removeDynamicItem('${field}', '${item}')">×</button>
             `;
             container.appendChild(row);
@@ -560,6 +554,73 @@ function renderDynamicList(field, obj) {
     addBtn.innerText = '+ Add Item';
     addBtn.onclick = () => addDynamicItem(field);
     container.appendChild(addBtn);
+}
+
+// Helpers for the Dynamic Comboboxes
+function toggleRowCombo(arrowBtn) {
+    const wrapper = arrowBtn.closest('.input-wrapper');
+    const list = wrapper.nextElementSibling; // The .combobox-list div
+    const input = wrapper.querySelector('input');
+    
+    if (list.style.display === 'block') {
+        list.style.display = 'none';
+    } else {
+        list.style.display = 'block';
+        input.focus();
+        filterRowCombo(input);
+    }
+}
+
+function filterRowCombo(input) {
+    const filter = input.value.toLowerCase();
+    const container = input.closest('.combobox-container');
+    const list = container.querySelector('.combobox-list');
+    
+    list.innerHTML = '';
+    list.style.display = 'block';
+    
+    let matches = allItemsList.filter(i => i.name.toLowerCase().includes(filter));
+    
+    // Sort smart: Starts With first
+    matches.sort((a, b) => {
+        const aStarts = a.name.toLowerCase().startsWith(filter);
+        const bStarts = b.name.toLowerCase().startsWith(filter);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return a.name.localeCompare(b.name);
+    });
+
+    if (matches.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'combo-item';
+        empty.innerText = "No matches";
+        empty.style.color = "#999";
+        list.appendChild(empty);
+    }
+
+    matches.forEach(match => {
+        const div = document.createElement('div');
+        div.className = 'combo-item';
+        div.innerHTML = `<span>${match.name}</span> <span class="combo-cat">${match.category}</span>`;
+        // Pass current value (item key) to replace
+        // Note: We need the field name and old key. 
+        // We can grab the old key from the input's default value or attribute? 
+        // Actually, the validate function handles the key swap.
+        // We just set the value and trigger change.
+        div.onclick = () => selectRowItem(input, match.name);
+        list.appendChild(div);
+    });
+}
+
+function selectRowItem(input, newName) {
+    input.value = newName;
+    // Hide list
+    const list = input.closest('.combobox-container').querySelector('.combobox-list');
+    list.style.display = 'none';
+    // Trigger the change event logic manually since we set value via JS
+    // The onchange handler in HTML is: validateAndSetKey(field, oldKey, input)
+    // We need to parse that string or just trigger event.
+    input.dispatchEvent(new Event('change'));
 }
 
 function validateAndSetKey(field, oldKey, inputElem) {
@@ -967,13 +1028,13 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
     let deductionText = [];
     if (p.selfFeed && p.targetItem === p.selectedFuel) { 
         let gross = p.targetRate + actualFuelNeed;
-        deductionText.push(`Gross: ${gross.toFixed(1)}`); 
-        deductionText.push(`Use: ${actualFuelNeed.toFixed(1)}`); 
+        deductionText.push(`Gross: ${gross.toFixed(2)}`); 
+        deductionText.push(`Use: ${actualFuelNeed.toFixed(2)}`); 
     }
     if (p.selfFert && p.targetItem === p.selectedFert) { 
         let gross = p.targetRate + actualFertNeed;
-        deductionText.push(`Gross: ${gross.toFixed(1)}`); 
-        deductionText.push(`Use: ${actualFertNeed.toFixed(1)}`); 
+        deductionText.push(`Gross: ${gross.toFixed(2)}`); 
+        deductionText.push(`Use: ${actualFertNeed.toFixed(2)}`); 
     }
     document.getElementById('summary-container').innerHTML = `
         <div class="summary-box">

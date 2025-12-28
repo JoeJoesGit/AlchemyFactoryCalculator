@@ -1,5 +1,15 @@
 # Alchemy Factory Calculator Change Log
 
+## v97 - Unified Loop Architecture
+* **Core Logic:** **Simulate First, Render Last.** Completely rewrote the calculation engine to use a strict 4-phase architecture:
+    1.  **Discovery:** Unconditionally simulates the factory loop to measure gross byproduct generation (ignoring recycling limits).
+    2.  **Stabilization:** Iteratively solves for the equilibrium point of Fuel/Fertilizer demand.
+    3.  **Reset:** Clears all global counters and pre-fills the recycling pool with the stable byproduct state.
+    4.  **Render:** Draws the final tree and accumulates the *actual* Heat/Nutrient/Cost totals as they occur.
+* **Fix:** **Summary Alignment.** The "Gross/Use" stats in the Summary Box now perfectly match the Production Tree values because they are summed directly from the final render pass, eliminating "phantom heat" from mismatched simulation steps.
+* **Fix:** **Recycle Visibility.** Fixed a bug where the Recycle Button would disappear if Self-Fuel was OFF. The byproduct pool is now correctly initialized in all modes, ensuring recycling options remain visible and togglable.
+* **UI:** **Precision Formatting.** Increased the decimal precision of the Summary Box "Gross" and "Use" fields from 1 to 2 places (e.g., `64.32`) to better expose small rounding variances.
+
 ## v96 - UI Polish & Code Cleanup (2025-12-24 19:24 EST)
 * **Feature:** **Visual Database Editor.** A complete overhaul of the data entry system. Replaced the raw text editor with a rich UI containing forms, dynamic lists, and toggle switches. Users can now safely edit Items, Recipes, and Machines without risking JSON syntax errors. (Includes a "Raw Source" fallback for advanced users).
 * **Refactor:** **Hybrid File Structure.** Cleaned up `index.html` to serve as a layout skeleton, moving all dynamic content logic, version control, and event handling into `alchemy_ui.js` to centralize configuration.
