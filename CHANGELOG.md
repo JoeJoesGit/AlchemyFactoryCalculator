@@ -1,5 +1,11 @@
 # Alchemy Factory Calculator Change Log
 
+## v98 - Robust Recycling Logic
+* **Fix:** **Mars Athanor Count.** Fixed a "Self-Eating Paradox" where the calculator would delete machines (Athanors) because it falsely assumed their own future output was available for free. The Render Phase now strictly adheres to the Recycling Decision Map generated during the Simulation Phase, ensuring correct machine counts (e.g., 2 Athanors for Mars instead of 1).
+* **Fix:** **Double Counting.** Fixed a bug where the available byproduct count was doubled (e.g., 480 instead of 240) due to redundant initialization in the final measurement pass. The live inventory now initializes correctly as empty before the Render Phase.
+* **Fix:** **Negative Byproducts.** Resolved an issue where recycling could result in negative numbers (e.g., -72 Planks). This was caused by double-deducting the recycled amount—once during the simulation snapshot and again during the render replay. The system now trusts the net result from the simulation.
+* **Refinement:** **Fuel Recycling.** The "External Inputs" section now correctly identifies and deducts recycled fuel (e.g., Planks for Advanced Fertilizer) from the import demand list.
+
 ## v97 - Unified Loop Architecture
 * **Core Logic:** **Simulate First, Render Last.** Completely rewrote the calculation engine to use a strict 4-phase architecture:
     1.  **Discovery:** Unconditionally simulates the factory loop to measure gross byproduct generation (ignoring recycling limits).

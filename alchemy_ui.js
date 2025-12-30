@@ -4,7 +4,7 @@
    ========================================================================== */
 
 let DB = null;
-const APP_VERSION = "v97"; // UI Version
+const APP_VERSION = "v98"; // UI Version
 const OLD_STORAGE_KEY = "alchemy_factory_save_v1"; // Deprecated key
 const SETTINGS_KEY = "alchemy_settings_v1";        // User Prefs (Belt level, etc)
 const CUSTOM_DB_KEY = "alchemy_custom_db_v1";      // Custom Recipe Data
@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS = {
     defaultFuel: "Plank",
     defaultFert: "Basic Fertilizer",
     preferredRecipes: {},
-    activeRecyclers: {}
+    activeRecyclers: {} // Now stores { "ItemName": true }
 };
 
 let isSelfFuel = false;
@@ -28,13 +28,13 @@ let allItemsList = [];
 let currentFocus = -1;
 
 // DB Editor State
-let currentDbSelection = null; 
-let dbFlatList = []; 
-let currentFilter = 'all'; 
+let currentDbSelection = null;
+let dbFlatList = [];
+let currentFilter = 'all';
 
 function init() {
     initHeader(); // Set title and version
-    
+
     // 1. CLEANUP OLD DATA
     if (localStorage.getItem(OLD_STORAGE_KEY)) {
         console.log("Detected legacy save data. Wiping for v96 architecture migration.");
@@ -44,23 +44,23 @@ function init() {
     // 2. LOAD DATABASE (Reference vs Custom)
     const officialDB = window.ALCHEMY_DB; // From alchemy_db.js
     const customDBStr = localStorage.getItem(CUSTOM_DB_KEY);
-    
+
     if (customDBStr) {
         try {
             const customDB = JSON.parse(customDBStr);
             DB = customDB;
-            
+
             // CHECK FOR UPDATES
             const offTime = officialDB.timestamp || "1970-01-01";
             const custTime = customDB.timestamp || "1970-01-01";
-            
+
             if (offTime > custTime) {
                 showUpdateNotification();
             } else {
                 console.log("Custom DB is up to date (or newer) than Official.");
             }
-            
-        } catch(e) {
+
+        } catch (e) {
             console.error("Failed to load custom DB, reverting to official.", e);
             DB = JSON.parse(JSON.stringify(officialDB));
         }
@@ -68,16 +68,16 @@ function init() {
         // Standard User: Load Official
         DB = JSON.parse(JSON.stringify(officialDB));
     }
-    
+
     // 3. LOAD SETTINGS (Overlay)
     // Apply user preferences on top of the loaded DB
     const savedSettings = localStorage.getItem(SETTINGS_KEY);
-    
+
     // Initialize structure if missing
-    if(!DB.items) DB.items = {};
-    
+    if (!DB.items) DB.items = {};
+
     // UPDATED: Use DEFAULT_SETTINGS if DB has no settings
-    if(!DB.settings) {
+    if (!DB.settings) {
         DB.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
     } else {
         // Fallback: Ensure missing keys in DB.settings are filled by Defaults
@@ -85,7 +85,7 @@ function init() {
     }
 
     // Ensure preferredRecipes object exists
-    if(!DB.settings.preferredRecipes) DB.settings.preferredRecipes = {};
+    if (!DB.settings.preferredRecipes) DB.settings.preferredRecipes = {};
 
     if (savedSettings) {
         try {
@@ -96,13 +96,13 @@ function init() {
                     DB.settings[key] = userSettings[key];
                 }
             });
-        } catch(e) {
+        } catch (e) {
             console.error("Error loading settings", e);
         }
     }
 
     // Global variables sync
-    if(DB.settings.activeRecyclers) {
+    if (DB.settings.activeRecyclers) {
         activeRecyclers = DB.settings.activeRecyclers;
     }
 
@@ -112,9 +112,9 @@ function init() {
     const urlRate = urlParams.get('rate');
 
     prepareComboboxData();
-    populateSelects(); 
+    populateSelects();
     loadSettingsToUI();
-    renderSlider(); 
+    renderSlider();
     createDataList();
 
     if (urlItem && urlRate) {
@@ -122,12 +122,12 @@ function init() {
         document.getElementById('targetRate').disabled = false;
         document.getElementById('targetRate').value = urlRate;
     } else {
-        updateFromSlider(); 
+        updateFromSlider();
     }
-    
+
     // Default raw editor text
     document.getElementById('json-editor').value = `window.ALCHEMY_DB = ${JSON.stringify(DB, null, 4)};`;
-    
+
     calculate();
 }
 
@@ -160,7 +160,7 @@ function hideUpdateNotification() {
    SECTION: DATA MANAGEMENT (Persist & Reset)
    ========================================================================== */
 
-function persist() { 
+function persist() {
     // We now ONLY save settings to the settings key.
     const settingsObj = {
         lvlBelt: parseInt(document.getElementById('lvlBelt').value) || 0,
@@ -175,7 +175,7 @@ function persist() {
     };
 
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settingsObj));
-    
+
     // Note: We also update the in-memory DB object so calculations work immediately
     DB.settings = { ...DB.settings, ...settingsObj };
 }
@@ -183,30 +183,30 @@ function persist() {
 function applyChanges() {
     const txt = generateDbString();
     localStorage.setItem(CUSTOM_DB_KEY, JSON.stringify(DB));
-    localStorage.setItem("alchemy_source_v1", txt); 
-    
+    localStorage.setItem("alchemy_source_v1", txt);
+
     initDbEditor();
     alert("Custom Database Saved! You are now using a local version.");
 }
 
-function resetFactory() { 
-    if(confirm("FULL RESET: This will wipe your Settings AND your Custom Database. Continue?")) { 
-        localStorage.removeItem(SETTINGS_KEY); 
-        localStorage.removeItem(CUSTOM_DB_KEY); 
+function resetFactory() {
+    if (confirm("FULL RESET: This will wipe your Settings AND your Custom Database. Continue?")) {
+        localStorage.removeItem(SETTINGS_KEY);
+        localStorage.removeItem(CUSTOM_DB_KEY);
         localStorage.removeItem("alchemy_source_v1");
-        location.reload(); 
-    } 
+        location.reload();
+    }
 }
 
 function resetSettings() {
-    if(confirm("Reset Upgrade Levels and Logistics preferences to default? (Recipes will stay)")) {
+    if (confirm("Reset Upgrade Levels and Logistics preferences to default? (Recipes will stay)")) {
         localStorage.removeItem(SETTINGS_KEY);
         location.reload();
     }
 }
 
 function resetRecipes() {
-    if(confirm("Discard custom recipes and revert to the Official Database?")) {
+    if (confirm("Discard custom recipes and revert to the Official Database?")) {
         localStorage.removeItem(CUSTOM_DB_KEY);
         localStorage.removeItem("alchemy_source_v1");
         location.reload();
@@ -220,20 +220,20 @@ function renderSlider() {
     if (typeof BELT_FRACTIONS === 'undefined') return;
     const slider = document.getElementById('beltSlider');
     const ticksContainer = document.getElementById('sliderTicks');
-    const thumbWidth = 14; 
-    
+    const thumbWidth = 14;
+
     slider.max = BELT_FRACTIONS.length - 1;
-    slider.value = BELT_FRACTIONS.length - 1; 
-    
+    slider.value = BELT_FRACTIONS.length - 1;
+
     ticksContainer.innerHTML = '';
-    
+
     BELT_FRACTIONS.forEach((frac, idx) => {
         const pct = (idx / (BELT_FRACTIONS.length - 1));
-        const leftPos = `calc(${pct * 100}% + (${(thumbWidth/2) - (thumbWidth * pct) + 2}px))`;
+        const leftPos = `calc(${pct * 100}% + (${(thumbWidth / 2) - (thumbWidth * pct) + 2}px))`;
         const tick = document.createElement('div');
         tick.className = `tick-mark ${frac.label ? 'labeled' : ''}`;
         tick.style.left = leftPos;
-        
+
         let labelHtml = '';
         if (frac.label) {
             if (frac.label === "Full") {
@@ -245,7 +245,7 @@ function renderSlider() {
                 labelHtml = `<div class="vertical-frac">${frac.label}</div>`;
             }
         }
-        
+
         tick.innerHTML = `<div class="tick-line"></div>${labelHtml}`;
         ticksContainer.appendChild(tick);
     });
@@ -279,7 +279,7 @@ function switchTab(tabName) {
 
 function initDbEditor() {
     dbFlatList = [];
-    
+
     // Items
     Object.keys(DB.items).forEach(key => {
         dbFlatList.push({ type: 'item', key: key, name: key, ...DB.items[key] });
@@ -298,7 +298,7 @@ function initDbEditor() {
     }
 
     // Sort alpha
-    dbFlatList.sort((a,b) => a.name.localeCompare(b.name));
+    dbFlatList.sort((a, b) => a.name.localeCompare(b.name));
 
     filterDbList();
 }
@@ -307,11 +307,11 @@ function setDbFilter(filter) {
     currentFilter = filter;
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
     const btns = document.querySelectorAll('.filter-btn');
-    if(filter === 'all') btns[0].classList.add('active');
-    if(filter === 'item') btns[1].classList.add('active');
-    if(filter === 'recipe') btns[2].classList.add('active');
-    if(filter === 'machine') btns[3].classList.add('active');
-    
+    if (filter === 'all') btns[0].classList.add('active');
+    if (filter === 'item') btns[1].classList.add('active');
+    if (filter === 'recipe') btns[2].classList.add('active');
+    if (filter === 'machine') btns[3].classList.add('active');
+
     filterDbList();
 }
 
@@ -331,21 +331,21 @@ function filterDbList() {
         if (currentDbSelection && currentDbSelection.key === obj.key && currentDbSelection.type === obj.type) {
             div.classList.add('selected');
         }
-        
+
         let typeLabel = obj.type === 'item' ? 'Item' : (obj.type === 'recipe' ? 'Recipe' : 'Machine');
         let subText = "";
-        
+
         if (obj.type === 'item') subText = obj.category || '';
         if (obj.type === 'recipe') subText = obj.machine;
-        
+
         if (obj.type === 'machine') {
             if (obj.tier !== undefined) {
                 subText = `Tier: ${obj.tier}`;
             } else {
-                subText = "Tier: ?"; 
+                subText = "Tier: ?";
             }
         }
-        
+
         div.innerHTML = `<span>${obj.name} <span class="db-subtext">(${subText})</span></span> <span class="db-type-tag ${obj.type}">${typeLabel}</span>`;
         div.onclick = () => selectDbObject(obj.type, obj.key);
         listEl.appendChild(div);
@@ -355,17 +355,17 @@ function filterDbList() {
 function selectDbObject(type, key) {
     currentDbSelection = { type, key };
     document.getElementById('db-editor-title').innerText = key;
-    
+
     // Show Report Button
     const reportBtn = document.getElementById('btn-report-issue');
     reportBtn.style.display = 'inline-block';
     reportBtn.innerText = `Report Issue: ${key}`;
-    
+
     // Hide Raw Editor if open
     document.getElementById('full-source-wrapper').style.display = 'none';
     document.getElementById('visual-editor-wrapper').style.display = 'block';
     document.getElementById('btn-raw-mode').style.display = 'inline-block';
-    
+
     filterDbList(); // Re-render to show selection highlight
     renderDbForm();
     updateSnippetView();
@@ -381,7 +381,7 @@ function updateSnippetView() {
 
     const snippet = document.getElementById('json-snippet');
     document.getElementById('snippet-container').style.display = 'block';
-    
+
     if (type === 'recipe') {
         snippet.value = JSON.stringify(data, null, 4);
     } else {
@@ -393,7 +393,7 @@ function renderDbForm() {
     if (!currentDbSelection) return;
     const container = document.getElementById('db-form-container');
     container.innerHTML = '';
-    
+
     const { type, key } = currentDbSelection;
     let data = null;
 
@@ -413,7 +413,7 @@ function renderDbForm() {
     } else if (type === 'recipe') {
         data = DB.recipes.find(r => r.id === key);
         let formHtml = `<div class="db-form">`;
-        formHtml += createInput('Machine', 'text', data.machine, 'machine'); 
+        formHtml += createInput('Machine', 'text', data.machine, 'machine');
         formHtml += createInput('Base Time (sec)', 'number', data.baseTime, 'baseTime');
         formHtml += `<div class="form-group full-width"><label>Inputs</label><div class="dynamic-list" id="list-inputs"></div></div>`;
         formHtml += `<div class="form-group full-width"><label>Outputs</label><div class="dynamic-list" id="list-outputs"></div></div>`;
@@ -425,20 +425,20 @@ function renderDbForm() {
     } else if (type === 'machine') {
         data = DB.machines[key];
         let formHtml = `<div class="db-form">`;
-        
+
         // --- NEW MACHINE FIELDS ---
         formHtml += createInput('Research Tier', 'number', data.tier, 'tier');
         formHtml += createInput('Slots for Stacking', 'number', data.slots, 'slots');
         formHtml += createInput('Slots Required', 'number', data.slotsRequired, 'slotsRequired');
         formHtml += createInput('Parent (if module)', 'text', data.parent, 'parent');
-        
+
         // Size and IO
         formHtml += `<div class="form-group full-width" style="display:flex; gap:10px;">
                         <div style="flex:1">${createInput('Size X', 'number', data.sizeX, 'sizeX')}</div>
                         <div style="flex:1">${createInput('Size Y', 'number', data.sizeY, 'sizeY')}</div>
                         <div style="flex:1">${createInput('Size Z', 'number', data.sizeZ, 'sizeZ')}</div>
                      </div>`;
-                      
+
         formHtml += `<div class="form-group full-width" style="display:flex; gap:10px;">
                         <div style="flex:1">${createInput('Input Count', 'number', data.inputCount, 'inputCount')}</div>
                         <div style="flex:1">${createInput('Output Count', 'number', data.outputCount, 'outputCount')}</div>
@@ -447,7 +447,7 @@ function renderDbForm() {
         // Heat Toggles
         formHtml += createToggleInput('Heat Cost', data.heatCost, 'heatCost');
         formHtml += createToggleInput('Heat Gen (Self)', data.heatSelf, 'heatSelf');
-        
+
         // Build Cost List
         formHtml += `<div class="form-group full-width"><label>Build Cost</label><div class="dynamic-list" id="list-buildCost"></div></div>`;
         formHtml += `</div>`;
@@ -469,7 +469,7 @@ function createInput(label, type, val, prop) {
 function createToggleInput(label, val, prop) {
     const isEnabled = (val !== undefined && val !== 0);
     const value = isEnabled ? val : 0;
-    
+
     return `
         <div class="form-group">
             <label style="display:flex; align-items:center; gap:8px;">
@@ -485,7 +485,7 @@ function toggleField(prop, checked) {
     const input = document.getElementById(`input-${prop}`);
     if (checked) {
         input.disabled = false;
-        if(input.value === "") input.value = 0;
+        if (input.value === "") input.value = 0;
         updateDbProperty(prop, input.value, 'number');
     } else {
         input.disabled = true;
@@ -509,8 +509,8 @@ function updateDbProperty(prop, val, type) {
     } else {
         const recipe = DB.recipes.find(r => r.id === currentDbSelection.key);
         if (recipe) {
-             if (finalVal === undefined) delete recipe[prop];
-             else recipe[prop] = finalVal;
+            if (finalVal === undefined) delete recipe[prop];
+            else recipe[prop] = finalVal;
         }
     }
     updateSnippetView();
@@ -521,12 +521,12 @@ function updateDbProperty(prop, val, type) {
 function renderDynamicList(field, obj) {
     const container = document.getElementById(`list-${field}`);
     container.innerHTML = '';
-    
+
     if (obj) {
         Object.keys(obj).forEach(item => {
             const row = document.createElement('div');
             row.className = 'dynamic-row';
-            
+
             // Custom Combobox + Number Input + Remove Button
             row.innerHTML = `
                 <div class="combobox-container" style="flex:1; margin-right:10px;">
@@ -561,7 +561,7 @@ function toggleRowCombo(arrowBtn) {
     const wrapper = arrowBtn.closest('.input-wrapper');
     const list = wrapper.nextElementSibling; // The .combobox-list div
     const input = wrapper.querySelector('input');
-    
+
     if (list.style.display === 'block') {
         list.style.display = 'none';
     } else {
@@ -575,12 +575,12 @@ function filterRowCombo(input) {
     const filter = input.value.toLowerCase();
     const container = input.closest('.combobox-container');
     const list = container.querySelector('.combobox-list');
-    
+
     list.innerHTML = '';
     list.style.display = 'block';
-    
+
     let matches = allItemsList.filter(i => i.name.toLowerCase().includes(filter));
-    
+
     // Sort smart: Starts With first
     matches.sort((a, b) => {
         const aStarts = a.name.toLowerCase().startsWith(filter);
@@ -681,8 +681,8 @@ function addDynamicItem(field) {
         // Find unique name
         let name = "New Item";
         let counter = 1;
-        while(targetObj[field][name]) { name = "New Item " + counter++; }
-        
+        while (targetObj[field][name]) { name = "New Item " + counter++; }
+
         targetObj[field][name] = 1;
         renderDynamicList(field, targetObj[field]);
         updateSnippetView();
@@ -704,7 +704,7 @@ function toggleFullSourceMode() {
         btnRaw.style.display = 'none'; // Hide button inside logic, show cancel instead
         btnReport.style.display = 'none';
         title.innerText = "Editing Full Database Source";
-        
+
         // Populate text area
         document.getElementById('json-editor').value = `window.ALCHEMY_DB = ${JSON.stringify(DB, null, 4)};`;
         currentDbSelection = null; // Clear selection visual
@@ -724,16 +724,16 @@ function saveFullSource() {
     const txt = document.getElementById('json-editor').value;
     try {
         if (txt.includes("window.ALCHEMY_DB")) {
-             eval(txt);
-             DB = window.ALCHEMY_DB;
-             
-             // Save to CUSTOM DB KEY since user modified source
-             applyChanges(); 
-             toggleFullSourceMode(); 
+            eval(txt);
+            DB = window.ALCHEMY_DB;
+
+            // Save to CUSTOM DB KEY since user modified source
+            applyChanges();
+            toggleFullSourceMode();
         } else {
             throw new Error("Missing 'window.ALCHEMY_DB =' assignment.");
         }
-    } catch(e) { alert("Syntax Error: " + e.message); }
+    } catch (e) { alert("Syntax Error: " + e.message); }
 }
 
 function generateDbString() {
@@ -745,17 +745,17 @@ function generateDbString() {
    ========================================================================== */
 function reportGithubIssue() {
     if (!currentDbSelection) return;
-    
+
     const { type, key } = currentDbSelection;
     let dataStr = "";
-    
+
     if (type === 'item') dataStr = JSON.stringify(DB.items[key], null, 4);
     else if (type === 'machine') dataStr = JSON.stringify(DB.machines[key], null, 4);
     else dataStr = JSON.stringify(DB.recipes.find(r => r.id === key), null, 4);
-    
+
     const title = encodeURIComponent(`[Data Error] ${key}`);
     const body = encodeURIComponent(`I found an issue with **${key}** (${type}).\n\n**Current Data:**\n\`\`\`json\n${dataStr}\n\`\`\`\n\n**Suggested Correction:**\n(Please describe what is wrong and what the correct values should be)`);
-    
+
     const url = `https://github.com/JoeJoesGit/AlchemyFactoryCalculator/issues/new?title=${title}&body=${body}`;
     window.open(url, '_blank');
 }
@@ -765,7 +765,7 @@ function reportGithubIssue() {
    ========================================================================== */
 
 function exportData() {
-    const txt = generateDbString(); 
+    const txt = generateDbString();
     const blob = new Blob([txt], { type: "text/javascript" });
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = "alchemy_db.js"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
@@ -780,7 +780,7 @@ function saveSettings() {
    ========================================================================== */
 function prepareComboboxData() {
     const allItems = new Set(Object.keys(DB.items || {}));
-    if(DB.recipes) DB.recipes.forEach(r => Object.keys(r.outputs).forEach(k => allItems.add(k)));
+    if (DB.recipes) DB.recipes.forEach(r => Object.keys(r.outputs).forEach(k => allItems.add(k)));
     allItemsList = Array.from(allItems).sort().map(name => {
         return { name: name, category: (DB.items[name] ? DB.items[name].category : "Other") };
     });
@@ -788,17 +788,17 @@ function prepareComboboxData() {
 function toggleCombobox() {
     const list = document.getElementById('combobox-list');
     const input = document.getElementById('targetItemInput');
-    if(list.style.display === 'block') { closeCombobox(); } else { input.focus(); filterCombobox(); }
+    if (list.style.display === 'block') { closeCombobox(); } else { input.focus(); filterCombobox(); }
 }
 function updateComboIcon() {
     const input = document.getElementById('targetItemInput');
     const icon = document.getElementById('combo-btn');
-    if(input.value.trim().length > 0) { icon.innerText = "✖"; icon.style.color = "#ff5252"; } else { icon.innerText = "▼"; icon.style.color = "#888"; }
+    if (input.value.trim().length > 0) { icon.innerText = "✖"; icon.style.color = "#ff5252"; } else { icon.innerText = "▼"; icon.style.color = "#888"; }
 }
 function handleComboIconClick(e) {
     e.stopPropagation();
     const input = document.getElementById('targetItemInput');
-    if(input.value.trim().length > 0) { input.value = ""; filterCombobox(); updateComboIcon(); input.focus(); } else { toggleCombobox(); }
+    if (input.value.trim().length > 0) { input.value = ""; filterCombobox(); updateComboIcon(); input.focus(); } else { toggleCombobox(); }
 }
 function closeCombobox() { document.getElementById('combobox-list').style.display = 'none'; currentFocus = -1; }
 function closeComboboxDelayed() { setTimeout(() => closeCombobox(), 200); }
@@ -820,7 +820,7 @@ function filterCombobox() {
     matches.forEach((item) => {
         const div = document.createElement('div'); div.className = 'combo-item';
         div.innerHTML = `<span>${item.name}</span> <span class="combo-cat">${item.category}</span>`;
-        div.onclick = function() { selectItem(item.name); };
+        div.onclick = function () { selectItem(item.name); };
         list.appendChild(div);
     });
     if (filter.length > 0 && matches.length > 0) {
@@ -836,13 +836,13 @@ function handleComboKey(e) {
     const items = list.getElementsByClassName('combo-item');
     const input = document.getElementById('targetItemInput');
     const ghost = document.getElementById('ghost-text');
-    if (e.key === 'ArrowDown') { currentFocus++; if (currentFocus >= items.length) currentFocus = 0; setActive(items); e.preventDefault(); } 
-    else if (e.key === 'ArrowUp') { currentFocus--; if (currentFocus < 0) currentFocus = items.length - 1; setActive(items); e.preventDefault(); } 
+    if (e.key === 'ArrowDown') { currentFocus++; if (currentFocus >= items.length) currentFocus = 0; setActive(items); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { currentFocus--; if (currentFocus < 0) currentFocus = items.length - 1; setActive(items); e.preventDefault(); }
     else if (e.key === 'Enter') {
         e.preventDefault();
-        if (currentFocus > -1 && items.length > 0) { items[currentFocus].click(); } 
-        else if (ghost.innerText.length > input.value.length) { selectItem(ghost.innerText); } 
-        else if (items.length > 0) { items[0].click(); } 
+        if (currentFocus > -1 && items.length > 0) { items[currentFocus].click(); }
+        else if (ghost.innerText.length > input.value.length) { selectItem(ghost.innerText); }
+        else if (items.length > 0) { items[0].click(); }
         else { closeCombobox(); calculate(); }
     } else if (e.key === 'Tab') { if (ghost.innerText.length > input.value.length) { e.preventDefault(); selectItem(ghost.innerText); } else { closeCombobox(); } }
 }
@@ -859,13 +859,13 @@ function setActive(items) {
 }
 function selectItem(name) {
     const input = document.getElementById('targetItemInput'); input.value = name;
-    document.getElementById('ghost-text').innerText = ""; closeCombobox(); updateComboIcon(); updateFromSlider(); 
+    document.getElementById('ghost-text').innerText = ""; closeCombobox(); updateComboIcon(); updateFromSlider();
 }
 function loadSettingsToUI() {
     if (DB.settings) {
-        ['lvlBelt','lvlSpeed','lvlAlchemy','lvlFuel','lvlFert'].forEach(k => { if(DB.settings[k] !== undefined) document.getElementById(k).value = DB.settings[k]; });
-        if(DB.settings.defaultFuel) document.getElementById('fuelSelect').value = DB.settings.defaultFuel; 
-        if(DB.settings.defaultFert) document.getElementById('fertSelect').value = DB.settings.defaultFert; 
+        ['lvlBelt', 'lvlSpeed', 'lvlAlchemy', 'lvlFuel', 'lvlFert'].forEach(k => { if (DB.settings[k] !== undefined) document.getElementById(k).value = DB.settings[k]; });
+        if (DB.settings.defaultFuel) document.getElementById('fuelSelect').value = DB.settings.defaultFuel;
+        if (DB.settings.defaultFert) document.getElementById('fertSelect').value = DB.settings.defaultFert;
     }
     updateDefaultButtonState();
 }
@@ -874,26 +874,26 @@ function populateSelects() {
     fuelSel.innerHTML = ''; fertSel.innerHTML = '';
     const fuels = []; const ferts = [];
     const allItems = new Set(Object.keys(DB.items || {}));
-    if(DB.recipes) DB.recipes.forEach(r => Object.keys(r.outputs).forEach(k => allItems.add(k)));
+    if (DB.recipes) DB.recipes.forEach(r => Object.keys(r.outputs).forEach(k => allItems.add(k)));
     allItems.forEach(itemName => {
         const itemDef = DB.items[itemName] || {};
-        if(itemDef.heat) fuels.push({ name: itemName, heat: itemDef.heat });
-        if(itemDef.nutrientValue) ferts.push({ name: itemName, val: itemDef.nutrientValue });
+        if (itemDef.heat) fuels.push({ name: itemName, heat: itemDef.heat });
+        if (itemDef.nutrientValue) ferts.push({ name: itemName, val: itemDef.nutrientValue });
     });
-    fuels.sort((a,b) => b.heat - a.heat).forEach(f => { fuelSel.appendChild(new Option(`${f.name} (${f.heat} P)`, f.name)); });
-    ferts.sort((a,b) => b.val - a.val).forEach(f => { fertSel.appendChild(new Option(`${f.name} (${f.val} V)`, f.name)); });
+    fuels.sort((a, b) => b.heat - a.heat).forEach(f => { fuelSel.appendChild(new Option(`${f.name} (${f.heat} P)`, f.name)); });
+    ferts.sort((a, b) => b.val - a.val).forEach(f => { fertSel.appendChild(new Option(`${f.name} (${f.val} V)`, f.name)); });
 }
 function toggleFuel() {
     const btn = document.getElementById('btnSelfFuel'); const chk = document.getElementById('selfFeed');
     chk.checked = !chk.checked;
-    if(chk.checked) { btn.innerText = "Self-Fuel: ON"; btn.classList.remove('btn-inactive-red'); btn.classList.add('btn-active-green'); } 
+    if (chk.checked) { btn.innerText = "Self-Fuel: ON"; btn.classList.remove('btn-inactive-red'); btn.classList.add('btn-active-green'); }
     else { btn.innerText = "Self-Fuel: OFF"; btn.classList.remove('btn-active-green'); btn.classList.add('btn-inactive-red'); }
     calculate();
 }
 function toggleFert() {
     const btn = document.getElementById('btnSelfFert'); const chk = document.getElementById('selfFert');
     chk.checked = !chk.checked;
-    if(chk.checked) { btn.innerText = "Self-Fert: ON"; btn.classList.remove('btn-inactive-red'); btn.classList.add('btn-active-green'); } 
+    if (chk.checked) { btn.innerText = "Self-Fert: ON"; btn.classList.remove('btn-inactive-red'); btn.classList.add('btn-active-green'); }
     else { btn.innerText = "Self-Fert: OFF"; btn.classList.remove('btn-active-green'); btn.classList.add('btn-inactive-red'); }
     calculate();
 }
@@ -902,21 +902,21 @@ function setDefaultFert() { const c = document.getElementById('fertSelect').valu
 function updateDefaultButtonState() {
     const curFuel = document.getElementById('fuelSelect').value; const defFuel = DB.settings.defaultFuel;
     const btnFuel = document.getElementById('btnDefFuel');
-    if(curFuel === defFuel) { btnFuel.disabled = true; btnFuel.innerText = "Current Default"; } else { btnFuel.disabled = false; btnFuel.innerText = "Make Default"; }
+    if (curFuel === defFuel) { btnFuel.disabled = true; btnFuel.innerText = "Current Default"; } else { btnFuel.disabled = false; btnFuel.innerText = "Make Default"; }
     const curFert = document.getElementById('fertSelect').value; const defFert = DB.settings.defaultFert;
     const btnFert = document.getElementById('btnDefFert');
-    if(curFert === defFert) { btnFert.disabled = true; btnFert.innerText = "Current Default"; } else { btnFert.disabled = false; btnFert.innerText = "Make Default"; }
+    if (curFert === defFert) { btnFert.disabled = true; btnFert.innerText = "Current Default"; } else { btnFert.disabled = false; btnFert.innerText = "Make Default"; }
 }
 
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
 function adjustInput(id, delta) { const el = document.getElementById(id); let val = parseInt(el.value) || 0; el.value = Math.max(0, val + delta); }
-function adjustRate(delta) { 
-    const el = document.getElementById('targetRate'); 
-    if(el.disabled) return; 
-    let val = parseFloat(el.value) || 0; 
-    el.value = (Math.round((val + delta) * 10) / 10).toFixed(1); 
-    calculate(); 
+function adjustRate(delta) {
+    const el = document.getElementById('targetRate');
+    if (el.disabled) return;
+    let val = parseFloat(el.value) || 0;
+    el.value = (Math.round((val + delta) * 10) / 10).toFixed(1);
+    calculate();
 }
 function openRecipeModal(item, domElement) {
     const candidates = getRecipesFor(item);
@@ -926,7 +926,7 @@ function openRecipeModal(item, domElement) {
     const currentId = (getActiveRecipe(item) || {}).id;
     let ancestors = [];
     if (domElement && domElement.dataset.ancestors) {
-        try { ancestors = JSON.parse(domElement.dataset.ancestors); } catch(e) {}
+        try { ancestors = JSON.parse(domElement.dataset.ancestors); } catch (e) { }
     }
     candidates.forEach(r => {
         const div = document.createElement('div');
@@ -962,9 +962,9 @@ function updateConstructionList(maxCounts, minCounts, furnaces) {
     const sortedMachines = Object.keys(maxCounts).sort();
     let totalConstructionMaterials = {};
     sortedMachines.forEach(m => {
-        const countMax = maxCounts[m]; 
+        const countMax = maxCounts[m];
         const countMin = Math.ceil(minCounts[m]);
-        if(countMax <= 0) return;
+        if (countMax <= 0) return;
         let label = (countMax === countMin) ? `${countMax}` : `<span style="font-size:0.9em">Min ${countMin}, Max ${countMax}</span>`;
         const li = document.createElement('li'); li.className = 'build-group';
         const machineDef = DB.machines[m] || {};
@@ -975,7 +975,7 @@ function updateConstructionList(maxCounts, minCounts, furnaces) {
             Object.keys(buildCost).forEach(mat => {
                 const totalQty = buildCost[mat] * countMin;
                 subListHtml += `<li class="build-subitem"><span>${mat}</span> <span class="build-val">${totalQty}</span></li>`;
-                if(!totalConstructionMaterials[mat]) totalConstructionMaterials[mat] = 0;
+                if (!totalConstructionMaterials[mat]) totalConstructionMaterials[mat] = 0;
                 totalConstructionMaterials[mat] += totalQty;
             });
             subListHtml += `</ul>`;
@@ -985,7 +985,7 @@ function updateConstructionList(maxCounts, minCounts, furnaces) {
         li.innerHTML = `<div class="build-header" onclick="toggleBuildGroup(this.parentNode)"><span><span class="build-arrow">▶</span> ${m}</span> <span class="build-count">${label}</span></div>${subListHtml}`;
         buildList.appendChild(li);
     });
-    if(furnaces > 0) {
+    if (furnaces > 0) {
         const li = document.createElement('li'); li.className = 'build-group';
         const mName = "Stone Furnace"; const count = furnaces;
         const machineDef = DB.machines[mName] || {}; const buildCost = machineDef.buildCost;
@@ -995,7 +995,7 @@ function updateConstructionList(maxCounts, minCounts, furnaces) {
             Object.keys(buildCost).forEach(mat => {
                 const totalQty = buildCost[mat] * count;
                 subListHtml += `<li class="build-subitem"><span>${mat}</span> <span class="build-val">${totalQty}</span></li>`;
-                if(!totalConstructionMaterials[mat]) totalConstructionMaterials[mat] = 0;
+                if (!totalConstructionMaterials[mat]) totalConstructionMaterials[mat] = 0;
                 totalConstructionMaterials[mat] += totalQty;
             });
             subListHtml += `</ul>`;
@@ -1026,15 +1026,15 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
         profitHtml = `<div class="stat-block"><span class="stat-label">Total Raw Cost</span><span class="stat-value gold-cost">${Math.ceil(cost).toLocaleString()} G/m</span></div>`;
     }
     let deductionText = [];
-    if (p.selfFeed && p.targetItem === p.selectedFuel) { 
+    if (p.selfFeed && p.targetItem === p.selectedFuel) {
         let gross = p.targetRate + actualFuelNeed;
-        deductionText.push(`Gross: ${gross.toFixed(2)}`); 
-        deductionText.push(`Use: ${actualFuelNeed.toFixed(2)}`); 
+        deductionText.push(`Gross: ${gross.toFixed(2)}`);
+        deductionText.push(`Use: ${actualFuelNeed.toFixed(2)}`);
     }
-    if (p.selfFert && p.targetItem === p.selectedFert) { 
+    if (p.selfFert && p.targetItem === p.selectedFert) {
         let gross = p.targetRate + actualFertNeed;
-        deductionText.push(`Gross: ${gross.toFixed(2)}`); 
-        deductionText.push(`Use: ${actualFertNeed.toFixed(2)}`); 
+        deductionText.push(`Gross: ${gross.toFixed(2)}`);
+        deductionText.push(`Use: ${actualFertNeed.toFixed(2)}`);
     }
     document.getElementById('summary-container').innerHTML = `
         <div class="summary-box">
@@ -1042,14 +1042,14 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
             <div class="stat-block"><span class="stat-label">Internal Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: ${internalHeat.toFixed(1)} P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: ${formatVal(internalBio)} V/s</span></div>
             <div class="stat-block"><span class="stat-label">External Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: ${externalHeat.toFixed(1)} P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: ${formatVal(externalBio)} V/s</span></div>
             ${profitHtml}
-            <div class="stat-block"><span class="stat-label">Belt Usage (Net)</span><span class="stat-value" style="font-size:1.1em; color:${p.targetRate > p.beltSpeed ? '#ff5252' : '#aaa'};">${(p.targetRate/p.beltSpeed * 100).toFixed(0)}%</span><span class="stat-sub">Cap: ${p.beltSpeed}/m</span></div>
+            <div class="stat-block"><span class="stat-label">Belt Usage (Net)</span><span class="stat-value" style="font-size:1.1em; color:${p.targetRate > p.beltSpeed ? '#ff5252' : '#aaa'};">${(p.targetRate / p.beltSpeed * 100).toFixed(0)}%</span><span class="stat-sub">Cap: ${p.beltSpeed}/m</span></div>
         </div>`;
 }
 function toggleBuildGroup(header) { header.classList.toggle('expanded'); }
 function toggleNode(arrowElement) { const node = arrowElement.closest('.node'); if (node) node.classList.toggle('collapsed'); }
-function toggleRecycle(pathKey) {
-    if (activeRecyclers[pathKey]) { delete activeRecyclers[pathKey]; } 
-    else { activeRecyclers[pathKey] = true; }
+function toggleRecycle(itemName) {
+    if (activeRecyclers[itemName]) { delete activeRecyclers[itemName]; }
+    else { activeRecyclers[itemName] = true; }
     persist(); calculate();
 }
 window.onload = init;
