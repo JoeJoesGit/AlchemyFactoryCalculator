@@ -3,39 +3,39 @@
    Handles recursion, math, and tree node generation.
    ========================================================================== */
 
-let rowCounter = 0; 
+let rowCounter = 0;
 let globalByproducts = {};
-let activeRecyclers = {}; // { "path_to_node": true }
+let activeRecyclers = {}; // { "ItemName": true }
 
 /* ==========================================================================
    SECTION: HELPER MATH FUNCTIONS
    ========================================================================== */
-function getBeltSpeed(lvl) { let s = 60; if(lvl>0) s += Math.min(lvl,12)*15; if(lvl>12) s += (lvl-12)*3; return s; }
-function getSpeedMult(lvl) { let m = 1.0; m += Math.min(lvl,12)*0.25; if(lvl>12) m += (lvl-12)*0.05; return m; }
-function getAlchemyMult(lvl) { if(lvl<=0) return 1.0; let p = 0; for(let i=1; i<=lvl; i++) { if(i<=2) p+=6; else if(i<=8) p+=8; else p+=10; } return 1.0 + (p/100); }
+function getBeltSpeed(lvl) { let s = 60; if (lvl > 0) s += Math.min(lvl, 12) * 15; if (lvl > 12) s += (lvl - 12) * 3; return s; }
+function getSpeedMult(lvl) { let m = 1.0; m += Math.min(lvl, 12) * 0.25; if (lvl > 12) m += (lvl - 12) * 0.05; return m; }
+function getAlchemyMult(lvl) { if (lvl <= 0) return 1.0; let p = 0; for (let i = 1; i <= lvl; i++) { if (i <= 2) p += 6; else if (i <= 8) p += 8; else p += 10; } return 1.0 + (p / 100); }
 
-function getRecipesFor(item) { if(!DB.recipes) return []; return DB.recipes.filter(r => r.outputs[item]); }
+function getRecipesFor(item) { if (!DB.recipes) return []; return DB.recipes.filter(r => r.outputs[item]); }
 function getActiveRecipe(item) {
     const candidates = getRecipesFor(item);
-    if(candidates.length === 0) return null; if(candidates.length === 1) return candidates[0];
+    if (candidates.length === 0) return null; if (candidates.length === 1) return candidates[0];
     const prefId = DB.settings.preferredRecipes[item];
-    if(prefId) { const found = candidates.find(r => r.id === prefId); if(found) return found; }
+    if (prefId) { const found = candidates.find(r => r.id === prefId); if (found) return found; }
     return candidates[0];
 }
 
 function getProductionHeatCost(item, speedMult, alchemyMult) {
     let cost = 0; const recipe = getActiveRecipe(item);
     if (recipe && recipe.outputs[item]) {
-         let batchYield = recipe.outputs[item];
-         if (recipe.machine === "Extractor" || recipe.machine === "Alembic") batchYield *= alchemyMult;
-         if (DB.machines[recipe.machine] && DB.machines[recipe.machine].heatCost) {
+        let batchYield = recipe.outputs[item];
+        if (recipe.machine === "Extractor" || recipe.machine === "Alembic") batchYield *= alchemyMult;
+        if (DB.machines[recipe.machine] && DB.machines[recipe.machine].heatCost) {
             const mach = DB.machines[recipe.machine]; const parent = DB.machines[mach.parent];
             const slotsReq = mach.slotsRequired || 1; const pSlots = mach.parentSlots || parent.slots || 3;
-            const heatPs = (mach.heatCost * speedMult) + (parent.heatSelf / (pSlots/slotsReq)); 
+            const heatPs = (mach.heatCost * speedMult) + (parent.heatSelf / (pSlots / slotsReq));
             cost += heatPs * ((recipe.baseTime / speedMult) / batchYield);
         }
-        Object.keys(recipe.inputs).forEach(k => { 
-            cost += getProductionHeatCost(k, speedMult, alchemyMult) * (recipe.inputs[k] / batchYield); 
+        Object.keys(recipe.inputs).forEach(k => {
+            cost += getProductionHeatCost(k, speedMult, alchemyMult) * (recipe.inputs[k] / batchYield);
         });
     }
     return cost;
@@ -48,27 +48,32 @@ function getProductionFertCost(item, fertVal, fertSpeed, speedMult, alchemyMult)
     if (recipe && recipe.outputs[item]) {
         let batchYield = recipe.outputs[item];
         if (recipe.machine === "Extractor" || recipe.machine === "Alembic") batchYield *= alchemyMult;
-        Object.keys(recipe.inputs).forEach(k => { 
-            cost += getProductionFertCost(k, fertVal, fertSpeed, speedMult, alchemyMult) * (recipe.inputs[k] / batchYield); 
+        Object.keys(recipe.inputs).forEach(k => {
+            cost += getProductionFertCost(k, fertVal, fertSpeed, speedMult, alchemyMult) * (recipe.inputs[k] / batchYield);
         });
     }
     return cost;
 }
 
-function formatVal(val) { if(val >= 1000000) return (val/1000000).toFixed(2) + 'm'; if(val >= 10000) return (val/1000).toFixed(2) + 'k'; return val.toFixed(2); }
+function formatVal(val) {
+    if (val === undefined || val === null) return "0.00";
+    if (val >= 1000000) return (val / 1000000).toFixed(2) + 'm';
+    if (val >= 10000) return (val / 1000).toFixed(2) + 'k';
+    return val.toFixed(2);
+}
 
 /* ==========================================================================
    SECTION: CALCULATION ENGINE
    ========================================================================== */
 function calculate() {
     try {
-        if(!DB || !DB.recipes) return;
-        
+        if (!DB || !DB.recipes) return;
+
         // 1. Gather Inputs
         let rawInput = document.getElementById('targetItemInput').value.trim();
         let targetItem = Object.keys(DB.items).find(k => k.toLowerCase() === rawInput.toLowerCase()) || rawInput;
         const targetRate = parseFloat(document.getElementById('targetRate').value) || 0;
-        
+
         // Settings
         const selectedFuel = document.getElementById('fuelSelect').value; const selfFeed = document.getElementById('selfFeed').checked;
         const selectedFert = document.getElementById('fertSelect').value; const selfFert = document.getElementById('selfFert').checked;
@@ -78,7 +83,7 @@ function calculate() {
         const lvlFuel = parseInt(document.getElementById('lvlFuel').value) || 0;
         const lvlAlchemy = parseInt(document.getElementById('lvlAlchemy').value) || 0;
         const lvlFert = parseInt(document.getElementById('lvlFert').value) || 0;
-        
+
         const params = {
             targetItem, targetRate, selectedFuel, selfFeed, selectedFert, selfFert, showMax,
             lvlSpeed, lvlBelt, lvlFuel, lvlAlchemy, lvlFert,
@@ -95,40 +100,62 @@ function calculate() {
             document.getElementById('rateLabel').innerText = `Rate (Items/Min): ${lbl}`;
         }
 
+        // --- EMPTY STATE HANDLING ---
+        if (!targetItem || !DB.items[targetItem]) {
+            document.getElementById('summary-container').innerHTML = `
+                <div class="summary-box">
+                    <div class="stat-block"><span class="stat-label">Net Output</span><span class="stat-value">0.0 / min</span></div>
+                    <div class="stat-block"><span class="stat-label">Internal Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: 0.0 P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: 0.00 V/s</span></div>
+                    <div class="stat-block"><span class="stat-label">External Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: 0.0 P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: 0.00 V/s</span></div>
+                    <div class="stat-block"><span class="stat-label">Total Raw Cost</span><span class="stat-value gold-cost">0 G/m</span></div>
+                    <div class="stat-block"><span class="stat-label">Belt Usage (Net)</span><span class="stat-value" style="font-size:1.1em; color:#aaa;">0%</span><span class="stat-sub">Cap: ${params.beltSpeed}/m</span></div>
+                </div>`;
+
+            document.getElementById('tree').innerHTML = `
+                <div style="text-align:center; padding:40px; color:#666; font-style:italic;">
+                    <h3>Select an Item to get started...</h3>
+                    <p>Use the search box above to choose a production target.</p>
+                </div>`;
+
+            document.getElementById('construction-list').innerHTML = '';
+            document.getElementById('total-mats-container').innerText = '';
+            return;
+        }
+
         // --- PASS 1: GHOST CALCULATION (Discovery) ---
-        globalByproducts = {}; 
-        calculatePass(params, true); 
+        globalByproducts = {};
+        calculatePass(params, true);
 
         // --- PASS 2: RENDER (Final) ---
         rowCounter = 0;
         document.getElementById('tree').innerHTML = '';
-        calculatePass(params, false); 
+        calculatePass(params, false);
 
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
 }
 
 function calculatePass(p, isGhost) {
     // Re-calc basic inputs
     const fuelDef = DB.items[p.selectedFuel] || {};
-    let netFuelEnergy = (fuelDef.heat || 10) * p.fuelMult; const grossFuelEnergy = netFuelEnergy; 
+    let netFuelEnergy = (fuelDef.heat || 10) * p.fuelMult; const grossFuelEnergy = netFuelEnergy;
     if (p.selfFeed) { netFuelEnergy -= getProductionHeatCost(p.selectedFuel, p.speedMult, p.alchemyMult); }
-    if(netFuelEnergy <= 0) netFuelEnergy = 0.1; 
+    if (netFuelEnergy <= 0) netFuelEnergy = 0.1;
 
     const fertDef = DB.items[p.selectedFert] || { nutrientValue: 144, maxFertility: 12 };
     let netFertVal = fertDef.nutrientValue * p.fertMult; const grossFertVal = netFertVal;
     if (p.selfFert) { netFertVal -= getProductionFertCost(p.selectedFert, netFertVal, fertDef.maxFertility, p.speedMult, p.alchemyMult); }
-    if(netFertVal <= 0) netFertVal = 0.1;
+    if (netFertVal <= 0) netFertVal = 0.1;
 
     let globalFuelDemandItems = 0; let globalFertDemandItems = 0; let globalHeatLoad = 0; let globalBioLoad = 0; let globalCostPerMin = 0;
     let totalByproducts = {};
-    
+
     // Tracking specific generation per-pass for stabilization
-    let trackGeneration = false; 
+    let trackGeneration = false;
     let iterationGenerated = {};
 
     // --- AGGREGATION STRUCTURES ---
     let machineStats = {};
-    let furnaceSlotDemand = {}; 
+    let furnaceSlotDemand = {};
 
     function addMachineCount(machineName, outputItem, countMax, countRaw) {
         if (!machineStats[machineName]) machineStats[machineName] = {};
@@ -140,11 +167,12 @@ function calculatePass(p, isGhost) {
     // =========================================================================
     // PHASE 1: SIMULATION & STABILIZATION
     // =========================================================================
-    
+
     let stableFuelDemand = 0;
     let stableFertDemand = 0;
-    let stableByproducts = {}; 
-    
+    let stableByproducts = {};
+    let recyclingMap = {}; // Stores precise recycling decisions: "path" -> amount
+
     let isAbsorbedFuel = (p.selfFeed && p.targetItem === p.selectedFuel);
     let isAbsorbedFert = (p.selfFert && p.targetItem === p.selectedFert);
 
@@ -152,39 +180,35 @@ function calculatePass(p, isGhost) {
         // Reset globals for simulation
         globalByproducts = {};
         globalFuelDemandItems = 0; globalFertDemandItems = 0; globalHeatLoad = 0; globalBioLoad = 0; globalCostPerMin = 0;
-        
+
         // 1. Base Snapshot: Run Primary Chain (Measurement Mode = true)
-        buildNode(p.targetItem, p.targetRate, false, [], true, true); 
-        let baseSnapshot = {...globalByproducts}; 
-        
+        buildNode(p.targetItem, p.targetRate, false, [], true, true);
+        let baseSnapshot = { ...globalByproducts };
+
         // Default stable state
-        stableByproducts = {...baseSnapshot};
-        
+        stableByproducts = { ...baseSnapshot };
+
         // 2. Stabilization Loop
         if (p.selfFeed || p.selfFert) {
-            let seedByproducts = {};
-            if (!isAbsorbedFuel && !isAbsorbedFert) {
-                seedByproducts = {...baseSnapshot};
-            }
+            // FIX: Initialize lastPassGenerated with the base run's output
+            // This represents the "Start of Tick" inventory for the first iteration
+            let lastPassGenerated = { ...baseSnapshot };
 
-            let lastPassGenerated = {}; 
+            // We do NOT need seedByproducts anymore because we re-simulate everything in the loop
 
-            for(let i=0; i<10; i++) {
-                // Setup Environment
-                globalByproducts = {...seedByproducts};
-                Object.keys(lastPassGenerated).forEach(k => {
-                    if(!globalByproducts[k]) globalByproducts[k] = 0;
-                    globalByproducts[k] += lastPassGenerated[k];
-                });
+            for (let i = 0; i < 10; i++) {
+                // Setup Environment: The available stock is exactly what was produced in the last pass
+                globalByproducts = { ...lastPassGenerated };
 
-                trackGeneration = true; 
+                trackGeneration = true;
                 iterationGenerated = {};
-                
+
+                // Reset Demand Counters
                 globalFuelDemandItems = 0; globalFertDemandItems = 0;
-                
+
                 let prevFuel = stableFuelDemand;
                 let prevFert = stableFertDemand;
-                
+
                 // Simulate
                 if (isAbsorbedFuel) {
                     buildNode(p.targetItem, p.targetRate + prevFuel, false, [], true, false);
@@ -193,19 +217,19 @@ function calculatePass(p, isGhost) {
                 } else {
                     buildNode(p.targetItem, p.targetRate, false, [], true, false);
                 }
-                
+
                 if (!isAbsorbedFuel && p.selfFeed && prevFuel > 0) {
-                    buildNode(p.selectedFuel, prevFuel, true, [], true, false); 
+                    buildNode(p.selectedFuel, prevFuel, true, [], true, false);
                 }
                 if (!isAbsorbedFert && p.selfFert && prevFert > 0) {
-                    buildNode(p.selectedFert, prevFert, true, [], true, false); 
+                    buildNode(p.selectedFert, prevFert, true, [], true, false);
                 }
-                
-                lastPassGenerated = {...iterationGenerated};
-                
+
+                lastPassGenerated = { ...iterationGenerated };
+
                 let nextFuel = globalFuelDemandItems;
                 let nextFert = globalFertDemandItems;
-                
+
                 if (Math.abs(nextFuel - prevFuel) < 0.01 && Math.abs(nextFert - prevFert) < 0.01) {
                     stableFuelDemand = nextFuel;
                     stableFertDemand = nextFert;
@@ -214,45 +238,50 @@ function calculatePass(p, isGhost) {
                 stableFuelDemand = nextFuel;
                 stableFertDemand = nextFert;
             }
-            
-            // Capture Final State (One last measurement pass at stable rate)
-            globalByproducts = {}; 
-            if (!isAbsorbedFuel && !isAbsorbedFert) {
-                globalByproducts = {...baseSnapshot};
-            }
-            
+
+            // Capture Final State (One last measurement pass at stable rate, MIRRORING SIMULATION LOGIC)
+            globalByproducts = {};
+
+            // Re-run the exact simulation step to capture the final stable state
             if (isAbsorbedFuel) {
                 buildNode(p.targetItem, p.targetRate + stableFuelDemand, false, [], true, true);
             } else if (isAbsorbedFert) {
                 buildNode(p.targetItem, p.targetRate + stableFertDemand, false, [], true, true);
             } else {
-                if (p.selfFeed && stableFuelDemand > 0) buildNode(p.selectedFuel, stableFuelDemand, true, [], true, true);
-                if (p.selfFert && stableFertDemand > 0) buildNode(p.selectedFert, stableFertDemand, true, [], true, true);
+                buildNode(p.targetItem, p.targetRate, false, [], true, true);
             }
-            
-            stableByproducts = {...globalByproducts};
+
+            if (!isAbsorbedFuel && p.selfFeed && stableFuelDemand > 0) {
+                buildNode(p.selectedFuel, stableFuelDemand, true, [], true, true);
+            }
+            if (!isAbsorbedFert && p.selfFert && stableFertDemand > 0) {
+                buildNode(p.selectedFert, stableFertDemand, true, [], true, true);
+            }
+
+            stableByproducts = { ...globalByproducts };
         }
     }
 
     // =========================================================================
     // PHASE 2: RESET & PREPARE FOR RENDER
     // =========================================================================
-    
+
     let primaryRenderRate = p.targetRate;
     let absorbedFuel = false;
     let absorbedFert = false;
 
     if (!isGhost) {
         // Reset Globals
-        globalFuelDemandItems = 0; 
-        globalFertDemandItems = 0; 
-        globalHeatLoad = 0; 
-        globalBioLoad = 0; 
+        globalFuelDemandItems = 0;
+        globalFertDemandItems = 0;
+        globalHeatLoad = 0;
+        globalBioLoad = 0;
         globalCostPerMin = 0;
-        
-        // Apply Stable Byproducts
-        globalByproducts = {...stableByproducts};
-        
+
+        // FIX: Start with EMPTY globalByproducts for the Render Pass.
+        // We accumulate production live. 'stableByproducts' tracks the "Remaining" counts for display.
+        globalByproducts = {};  // Was: { ...stableByproducts };
+
         if (p.selfFeed && p.targetItem === p.selectedFuel) {
             primaryRenderRate += stableFuelDemand;
             absorbedFuel = true;
@@ -261,11 +290,13 @@ function calculatePass(p, isGhost) {
             primaryRenderRate += stableFertDemand;
             absorbedFert = true;
         }
-        
+
         trackGeneration = false;
     }
 
     const treeContainer = document.getElementById('tree');
+    const reqContainer = document.getElementById('requirements-area');
+    if (reqContainer) reqContainer.innerHTML = '';
 
     // Recursive Builder
     function buildNode(item, rate, isInternalModule, ancestors = [], forceGhost = false, isMeasurement = false) {
@@ -273,89 +304,110 @@ function calculatePass(p, isGhost) {
 
         // RECYCLING CHECK
         let deduction = 0;
-        let pathKey = ancestors.join(">") + ">" + item;
+
+        // NEW: Unique Path Key for Stabilization Mapping
+        const pathKey = ancestors.join("|") + "|" + item;
         let canRecycle = false;
-        
-        // FIX: Always show button if active, even if pool is empty
-        if (!isMeasurement && activeRecyclers[pathKey]) {
-             canRecycle = true;
-             if (globalByproducts[item] > 0.01) {
-                 deduction = Math.min(rate, globalByproducts[item]);
-                 globalByproducts[item] -= deduction; 
-             }
-        } else if (!effectiveGhost && globalByproducts[item] > 0.01) {
-             canRecycle = true;
+
+        // VISIBILITY LOGIC:
+        if (effectiveGhost) {
+            // SIMULATION PHASE: Determine what can be recycled based on available byproducts
+            let availableStock = globalByproducts[item] || 0;
+
+            if (activeRecyclers[item] && availableStock > 0.01) {
+                deduction = Math.min(rate, availableStock);
+                globalByproducts[item] -= deduction;
+            } else if (availableStock > 0.01) {
+                // Check if we should auto-enable? (Legacy logic kept separate)
+                canRecycle = true;
+            }
+
+            // Store the decision for the Render Phase
+            recyclingMap[pathKey] = deduction;
+        } else {
+            // RENDER PHASE: Blindly follow the Simulation's decision
+            // This prevents "Self-Eating" where consuming the byproduct prevents the machine from being built
+            deduction = recyclingMap[pathKey] || 0;
+
+            // FIX: Do NOT deduct from stableByproducts again. 
+            // stableByproducts captures the NET result of the Simulation pass (Gross - Recycled).
+            // Subtracting here would double-dip and cause negative numbers.
+
+            if (activeRecyclers[item]) canRecycle = true;
+            else if ((stableByproducts[item] || 0) > 0.01) canRecycle = true;
         }
 
         const netRate = Math.max(0, rate - deduction);
-        const itemDef = DB.items[item] || {}; 
-        let ingredientChildren = []; 
+        const itemDef = DB.items[item] || {};
+        let ingredientChildren = [];
         let currentPath = [...ancestors, item];
         let myRowID = 0;
-        
+
         if (!effectiveGhost) { rowCounter++; myRowID = rowCounter; }
 
-        let outputTag = ""; let machineTag = ""; let heatTag = ""; let swapBtn = ""; 
+        let outputTag = ""; let machineTag = ""; let heatTag = ""; let swapBtn = "";
         let bioTag = ""; let costTag = ""; let detailsTag = ""; let recycleTag = "";
         let machinesNeeded = 0; let hasChildren = false;
 
         let isFuel = (item === p.selectedFuel); let isFert = (item === p.selectedFert);
-        if(isFuel) { outputTag = `<span class="output-tag">Output: ${formatVal((rate * (fuelDef.heat||10)*p.fuelMult)/60)} P/s</span>`; }
-        else if (isFert) { outputTag = `<span class="output-tag">Output: ${formatVal((rate * fertDef.nutrientValue*p.fertMult)/60)} V/s</span>`; }
+        if (isFuel) { outputTag = `<span class="output-tag">Output: ${formatVal((rate * (fuelDef.heat || 10) * p.fuelMult) / 60)} P/s</span>`; }
+        else if (isFert) { outputTag = `<span class="output-tag">Output: ${formatVal((rate * fertDef.nutrientValue * p.fertMult) / 60)} V/s</span>`; }
 
         // --- RECYCLE UI ---
         if (canRecycle && !effectiveGhost) {
-            if (activeRecyclers[pathKey]) {
+            // FIX: Pass 'item' instead of 'pathKey'
+            if (activeRecyclers[item]) {
                 let activeClass = "active";
                 let label = `♻️ ${formatVal(deduction)} Used`;
-                recycleTag = `<div class="push-right"><button class="recycle-btn ${activeClass}" onclick="toggleRecycle('${pathKey}')">${label}</button></div>`;
+                recycleTag = `<div class="push-right"><button class="recycle-btn ${activeClass}" onclick="toggleRecycle('${item}')">${label}</button></div>`;
             } else {
                 let label = `♻️ ${formatVal(globalByproducts[item])} Avail`;
-                recycleTag = `<div class="push-right"><button class="recycle-btn" onclick="toggleRecycle('${pathKey}')">${label}</button></div>`;
+                recycleTag = `<div class="push-right"><button class="recycle-btn" onclick="toggleRecycle('${item}')">${label}</button></div>`;
             }
         }
 
         // Logic branching based on Item Type
         if (itemDef.category === "Herbs" && itemDef.nutrientCost) {
-            const fertilitySpeed = (fertDef.maxFertility || 12); const timePerItem = itemDef.nutrientCost / fertilitySpeed; 
-            const calculatedSpeed = (60 / timePerItem) * p.speedMult; 
+            const fertilitySpeed = (fertDef.maxFertility || 12); const timePerItem = itemDef.nutrientCost / fertilitySpeed;
+            const calculatedSpeed = (60 / timePerItem) * p.speedMult;
             const isLiquid = (itemDef.liquid === true);
             const itemsPerMinPerMachine = isLiquid ? calculatedSpeed : Math.min(calculatedSpeed, p.beltSpeed);
-            
+
             machinesNeeded = netRate / itemsPerMinPerMachine;
             if (Math.abs(Math.round(machinesNeeded) - machinesNeeded) < 0.0001) { machinesNeeded = Math.round(machinesNeeded); }
 
-            if(!effectiveGhost) {
+            if (!effectiveGhost) {
                 addMachineCount("Nursery", item, Math.ceil(machinesNeeded - 0.0001), machinesNeeded);
             }
 
-            const totalNutrientsNeeded = netRate * itemDef.nutrientCost; const itemsNeeded = totalNutrientsNeeded / grossFertVal; 
-            
+            const totalNutrientsNeeded = netRate * itemDef.nutrientCost; const itemsNeeded = totalNutrientsNeeded / grossFertVal;
+
             // ACCUMULATION
             if (effectiveGhost || !isInternalModule || isInternalModule) {
-                globalFertDemandItems += itemsNeeded; 
-                globalBioLoad += (totalNutrientsNeeded / 60); 
+                globalFertDemandItems += itemsNeeded;
+                globalBioLoad += (totalNutrientsNeeded / 60);
             }
-            
-            if(!effectiveGhost) {
-                let tooltipText = `Recipe: ${item} (Nursery)\nBase Time: ${(timePerItem * (60/p.speedMult)).toFixed(1)}s\nSpeed Mult: ${p.speedMult.toFixed(2)}x\nThroughput: ${itemsPerMinPerMachine.toFixed(2)} items/min`;
+
+            if (!effectiveGhost) {
+                let tooltipText = `Recipe: ${item} (Nursery)\nBase Time: ${(timePerItem * (60 / p.speedMult)).toFixed(1)}s\nSpeed Mult: ${p.speedMult.toFixed(2)}x\nThroughput: ${itemsPerMinPerMachine.toFixed(2)} items/min`;
                 let capTag = "";
-                if(p.showMax) {
+                if (p.showMax) {
                     const maxOutput = Math.ceil(machinesNeeded) * itemsPerMinPerMachine;
                     capTag = `<span class="max-cap-tag">(Max: ${formatVal(maxOutput)}/m)</span>`;
                 }
                 machineTag = `<span class="machine-tag" title="${tooltipText}">${Math.ceil(machinesNeeded)} Nursery${capTag}</span>`;
                 bioTag = `<span class="bio-tag">Nutr: ${formatVal(netRate * itemDef.nutrientCost / 60)} V/s, Needs ${(netRate * itemDef.nutrientCost / grossFertVal).toFixed(1)}/m ${p.selectedFert}</span>`;
             }
-        } 
+        }
         else {
             const recipe = getActiveRecipe(item);
             if (!recipe) {
-                if(!effectiveGhost) {
-                    if(itemDef.buyPrice) { 
-                        let c = netRate * itemDef.buyPrice; 
-                        globalCostPerMin += c; 
-                        costTag = `<span class="cost-tag">${Math.ceil(c).toLocaleString()} G/m</span>`; 
+                if (!effectiveGhost) {
+                    if (itemDef.buyPrice) {
+                        let c = netRate * itemDef.buyPrice;
+                        globalCostPerMin += c;
+                        // Use formatCurrency for cost tag
+                        costTag = `<span class="cost-tag">${formatCurrency(c)}/m</span>`;
                     }
                     detailsTag = `<span class="details">(Raw Input)</span>`;
                 }
@@ -363,47 +415,46 @@ function calculatePass(p, isGhost) {
                 hasChildren = true;
                 let batchYield = recipe.outputs[item] || 1;
                 if (recipe.machine === "Extractor" || recipe.machine === "Alembic") batchYield *= p.alchemyMult;
-                
+
                 const batchesPerMin = netRate / batchYield;
                 const maxBatchesPerMin = (60 / recipe.baseTime) * p.speedMult;
                 const isLiquid = (itemDef.liquid === true);
                 let effectiveBatchesPerMin = maxBatchesPerMin;
-                
+
                 if (!isLiquid) {
                     const maxItemsPerMin = maxBatchesPerMin * batchYield;
                     if (maxItemsPerMin > p.beltSpeed) { effectiveBatchesPerMin = p.beltSpeed / batchYield; }
                 }
-                
+
                 let rawMachines = batchesPerMin / effectiveBatchesPerMin;
                 if (Math.abs(Math.round(rawMachines) - rawMachines) < 0.0001) { rawMachines = Math.round(rawMachines); }
                 machinesNeeded = rawMachines;
-                
+
                 Object.keys(recipe.outputs).forEach(outKey => {
                     if (outKey !== item) {
                         let yieldPerBatch = recipe.outputs[outKey];
-                        let totalByproduct = batchesPerMin * yieldPerBatch; 
-                        
+                        let totalByproduct = batchesPerMin * yieldPerBatch;
+
                         // TRACKING
                         if (trackGeneration) {
                             if (!iterationGenerated[outKey]) iterationGenerated[outKey] = 0;
                             iterationGenerated[outKey] += totalByproduct;
                         }
 
-                        // FIX: Accumulate Global Byproducts during Render Phase too (Just-In-Time Availability)
-                        if (effectiveGhost || !isInternalModule || !effectiveGhost) { 
-                            // Note: '!effectiveGhost' covers the Render Pass. 
-                            if(!globalByproducts[outKey]) globalByproducts[outKey] = 0;
+                        // Accumulate Global Byproducts during Render Phase too (Just-In-Time Availability)
+                        if (effectiveGhost || !isInternalModule || !effectiveGhost) {
+                            if (!globalByproducts[outKey]) globalByproducts[outKey] = 0;
                             globalByproducts[outKey] += totalByproduct;
                         }
-                        
+
                         if (!effectiveGhost) {
-                            if(!totalByproducts[outKey]) totalByproducts[outKey] = 0;
+                            if (!totalByproducts[outKey]) totalByproducts[outKey] = 0;
                             totalByproducts[outKey] += totalByproduct;
                         }
                     }
                 });
 
-                if(!effectiveGhost) {
+                if (!effectiveGhost) {
                     addMachineCount(recipe.machine, item, Math.ceil(machinesNeeded - 0.0001), machinesNeeded);
                 }
 
@@ -411,29 +462,29 @@ function calculatePass(p, isGhost) {
                 if (DB.machines[recipe.machine] && DB.machines[recipe.machine].heatCost) {
                     const mach = DB.machines[recipe.machine]; const parent = DB.machines[mach.parent];
                     const sReq = mach.slotsRequired || 1; const pSlots = mach.parentSlots || parent.slots || 3;
-                    const activeHeat = mach.heatCost * p.speedMult; 
-                    
-                    const nodeParentsNeeded = Math.ceil((machinesNeeded / (pSlots/sReq)) - 0.0001);
+                    const activeHeat = mach.heatCost * p.speedMult;
+
+                    const nodeParentsNeeded = Math.ceil((machinesNeeded / (pSlots / sReq)) - 0.0001);
                     const totalHeatPs = (nodeParentsNeeded * parent.heatSelf * p.speedMult) + (machinesNeeded * activeHeat);
-                    
+
                     if (!effectiveGhost) {
-                        const pName = mach.parent; 
+                        const pName = mach.parent;
                         if (!furnaceSlotDemand[pName]) furnaceSlotDemand[pName] = 0;
                         furnaceSlotDemand[pName] += Math.ceil(machinesNeeded - 0.0001) * sReq;
                     }
-                    
+
                     // ACCUMULATION
                     if (effectiveGhost || !isInternalModule || isInternalModule) {
-                        globalHeatLoad += totalHeatPs; 
+                        globalHeatLoad += totalHeatPs;
                         globalFuelDemandItems += (totalHeatPs * 60) / grossFuelEnergy;
                     }
-                    
-                    if(!effectiveGhost) {
+
+                    if (!effectiveGhost) {
                         heatTag = `<span class="heat-tag">Heat: ${totalHeatPs.toFixed(1)} P/s, Needs ${((totalHeatPs * 60) / grossFuelEnergy).toFixed(1)}/m ${p.selectedFuel}</span>`;
                     }
                 }
 
-                if(!effectiveGhost) {
+                if (!effectiveGhost) {
                     let inputsStr = Object.keys(recipe.inputs).map(k => `${recipe.inputs[k]} ${k}`).join(', ');
                     let outputsStr = Object.keys(recipe.outputs).map(k => `${recipe.outputs[k]} ${k}`).join(', ');
                     let cycleTime = recipe.baseTime / p.speedMult;
@@ -441,18 +492,18 @@ function calculatePass(p, isGhost) {
                     let tooltipText = `Recipe: ${inputsStr} -> ${outputsStr}\nBase Time: ${recipe.baseTime}s\nSpeed Mult: ${p.speedMult.toFixed(2)}x\nCycle Time: ${cycleTime.toFixed(2)}s\nThroughput: ${throughput.toFixed(2)} items/min per machine`;
 
                     let capTag = "";
-                    if(p.showMax) {
+                    if (p.showMax) {
                         const maxOutput = Math.ceil(machinesNeeded) * throughput;
                         capTag = `<span class="max-cap-tag">(Max: ${formatVal(maxOutput)}/m)</span>`;
                     }
                     machineTag = `<span class="machine-tag" title="${tooltipText}">${Math.ceil(machinesNeeded)} ${recipe.machine}s${capTag}</span>`;
 
                     const alts = getRecipesFor(item);
-                    if(alts.length > 1) { 
-                        swapBtn = `<button class="swap-btn" onclick="openRecipeModal('${item}', this.parentElement)" title="Swap Recipe">🔄</button>`; 
+                    if (alts.length > 1) {
+                        swapBtn = `<button class="swap-btn" onclick="openRecipeModal('${item}', this.parentElement)" title="Swap Recipe">🔄</button>`;
                     }
                 }
-                
+
                 // RECURSE INPUTS
                 if (netRate > 0.0001) {
                     const netBatches = netRate / batchYield;
@@ -466,10 +517,10 @@ function calculatePass(p, isGhost) {
         }
 
         if (effectiveGhost) {
-            ingredientChildren.forEach(child => { 
-                buildNode(child.item, child.rate, isInternalModule, currentPath, effectiveGhost, isMeasurement); 
+            ingredientChildren.forEach(child => {
+                buildNode(child.item, child.rate, isInternalModule, currentPath, effectiveGhost, isMeasurement);
             });
-            return null; 
+            return null;
         }
 
         // --- RENDER DOM ---
@@ -494,8 +545,8 @@ function calculatePass(p, isGhost) {
         if (ingredientChildren.length > 0) {
             const childrenDiv = document.createElement('div');
             childrenDiv.className = 'node-children';
-            ingredientChildren.forEach(child => { 
-                childrenDiv.appendChild(buildNode(child.item, child.rate, isInternalModule, currentPath, effectiveGhost, isMeasurement)); 
+            ingredientChildren.forEach(child => {
+                childrenDiv.appendChild(buildNode(child.item, child.rate, isInternalModule, currentPath, effectiveGhost, isMeasurement));
             });
             div.appendChild(childrenDiv);
         }
@@ -503,59 +554,101 @@ function calculatePass(p, isGhost) {
     }
 
     // --- EXECUTE THE PASS (RENDER PHASE) ---
-    if(p.targetItem) {
+    if (p.targetItem) {
         const root = buildNode(p.targetItem, primaryRenderRate, false, []);
-        if(!isGhost) {
-            let label = `--- Primary Production Chain (${p.targetItem}) ---`;
+        if (!isGhost) {
+            let label = `Primary Production Chain (${formatVal(primaryRenderRate)}/m ${p.targetItem})`;
             if (absorbedFuel && absorbedFert) { label += ` <span style="font-size:0.8em; color:#aaa; font-style:italic;">(Includes Internal Fuel & Fert)</span>`; }
             else if (absorbedFuel) { label += ` <span style="font-size:0.8em; color:#aaa; font-style:italic;">(Includes Internal Fuel)</span>`; }
             else if (absorbedFert) { label += ` <span style="font-size:0.8em; color:#aaa; font-style:italic;">(Includes Internal Fert)</span>`; }
 
-            const h = document.createElement('div'); h.className = 'section-header'; h.innerHTML = label; treeContainer.appendChild(h); 
-            treeContainer.appendChild(root);
+            const sectionContent = document.createElement('div');
+            sectionContent.appendChild(root);
+
+            const section = createCollapsibleSection(label, sectionContent, 'section-primary-chain');
+            treeContainer.appendChild(section);
         }
     }
 
     if (!isGhost) {
         if (p.selfFert && stableFertDemand > 0) {
             const grossFertNeeded = stableFertDemand;
+            const title = `Internal Nutrient Module (${formatVal(grossFertNeeded)}/m ${p.selectedFert})`;
             if (absorbedFert) {
-                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Nutrient Source: <strong>${p.selectedFert}</strong> (Supplied by Main Output)<br>Total Required: ${grossFertNeeded.toFixed(1)}/m</div>`; treeContainer.appendChild(note);
+                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Nutrient Source: <strong>${p.selectedFert}</strong> (Supplied by Main Output)<br>Total Required: ${grossFertNeeded.toFixed(1)}/m</div>`;
+                treeContainer.appendChild(createCollapsibleSection(title, note, 'section-internal-fert'));
             } else {
-                const h = document.createElement('div'); h.className = 'section-header'; h.innerText = `--- Internal Nutrient Module (${p.selectedFert}) ---`; treeContainer.appendChild(h); rowCounter=0; 
-                treeContainer.appendChild(buildNode(p.selectedFert, grossFertNeeded, true, []));
+                const moduleRoot = buildNode(p.selectedFert, grossFertNeeded, true, []);
+                const moduleContent = document.createElement('div');
+                moduleContent.appendChild(moduleRoot);
+                treeContainer.appendChild(createCollapsibleSection(title, moduleContent, 'section-internal-fert'));
             }
         }
 
         if (p.selfFeed && stableFuelDemand > 0) {
             const grossFuelNeeded = stableFuelDemand;
+            const title = `Internal Heat Module (${formatVal(grossFuelNeeded)}/m ${p.selectedFuel})`;
             if (absorbedFuel) {
-                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Fuel Source: <strong>${p.selectedFuel}</strong> (Supplied by Main Output)<br>Total Required: ${grossFuelNeeded.toFixed(1)}/m</div>`; treeContainer.appendChild(note);
+                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Fuel Source: <strong>${p.selectedFuel}</strong> (Supplied by Main Output)<br>Total Required: ${grossFuelNeeded.toFixed(1)}/m</div>`;
+                treeContainer.appendChild(createCollapsibleSection(title, note, 'section-internal-heat'));
             } else {
-                const h = document.createElement('div'); h.className = 'section-header'; h.innerText = `--- Internal Heat Module (${p.selectedFuel}) ---`; treeContainer.appendChild(h); rowCounter=0; 
-                treeContainer.appendChild(buildNode(p.selectedFuel, grossFuelNeeded, true, []));
+                const moduleRoot = buildNode(p.selectedFuel, grossFuelNeeded, true, []);
+                const moduleContent = document.createElement('div');
+                moduleContent.appendChild(moduleRoot);
+                treeContainer.appendChild(createCollapsibleSection(title, moduleContent, 'section-internal-heat'));
             }
         }
     }
 
     if (!isGhost) {
         // --- SUMMARY & EXTERNALS ---
-        const extH = document.createElement('div'); extH.className = 'section-header'; extH.innerText = `--- External Inputs ---`; treeContainer.appendChild(extH);
+        // Use formatCurrency in External Input Summary
         const extDiv = document.createElement('div'); extDiv.className = 'node';
-        let extHTML = `<div class="node-content" style="margin-bottom:5px;"><span class="qty" style="color:var(--gold)">${Math.ceil(globalCostPerMin).toLocaleString()} G/m</span><strong>Raw Material Cost</strong></div>`;
-        
-        if (!p.selfFeed && globalFuelDemandItems > 0) { extHTML += `<div class="node-content" style="margin-bottom:5px;"><span class="qty" style="color:var(--fuel)">${globalFuelDemandItems.toFixed(1)}/m</span><strong>${p.selectedFuel}</strong> (Fuel Import)</div>`; }
-        if (!p.selfFert && globalFertDemandItems > 0) { extHTML += `<div class="node-content" style="margin-bottom:5px;"><span class="qty" style="color:var(--bio)">${globalFertDemandItems.toFixed(1)}/m</span><strong>${p.selectedFert}</strong> (Fertilizer Import)</div>`; }
-        
-        extDiv.innerHTML = extHTML; treeContainer.appendChild(extDiv);
+        let extHTML = `<div class="node-content" style="margin-bottom:5px;"><span class="qty" style="color:var(--gold)">${formatCurrency(globalCostPerMin)}/m</span><strong>Raw Material Cost</strong></div>`;
 
-        const bypHeader = document.createElement('div'); bypHeader.className = 'section-header'; bypHeader.innerText = `--- BYPRODUCTS ---`; treeContainer.appendChild(bypHeader);
+        if (!p.selfFeed && globalFuelDemandItems > 0) {
+            let needed = globalFuelDemandItems;
+            let label = "(Fuel Import)";
+            if (activeRecyclers[p.selectedFuel]) {
+                const avail = stableByproducts[p.selectedFuel] || 0;
+                const recycled = Math.min(needed, avail);
+                needed -= recycled;
+                if (recycled > 0) {
+                    label = `(Import, ${formatVal(recycled)} recycled)`;
+                    stableByproducts[p.selectedFuel] -= recycled;
+                }
+            }
+            if (needed > 0.01) extHTML += `<div class="node-content" style="margin-bottom:5px;"><span class="qty" style="color:var(--fuel)">${needed.toFixed(1)}/m</span><strong>${p.selectedFuel}</strong> ${label}</div>`;
+        }
+        if (!p.selfFert && globalFertDemandItems > 0) {
+            let needed = globalFertDemandItems;
+            let label = "(Fertilizer Import)";
+            if (activeRecyclers[p.selectedFert]) {
+                const avail = stableByproducts[p.selectedFert] || 0;
+                const recycled = Math.min(needed, avail);
+                needed -= recycled;
+                if (recycled > 0) {
+                    label = `(Import, ${formatVal(recycled)} recycled)`;
+                    stableByproducts[p.selectedFert] -= recycled;
+                }
+            }
+            if (needed > 0.01) extHTML += `<div class="node-content" style="margin-bottom:5px;"><span class="qty" style="color:var(--bio)">${needed.toFixed(1)}/m</span><strong>${p.selectedFert}</strong> ${label}</div>`;
+        }
+
+        extDiv.innerHTML = extHTML;
+        if (reqContainer) {
+            reqContainer.appendChild(createCollapsibleSection("External Inputs", extDiv, 'section-external-inputs'));
+        } else {
+            treeContainer.appendChild(createCollapsibleSection("External Inputs", extDiv, 'section-external-inputs'));
+        }
+
+        // --- BYPRODUCTS LOGIC ---
         const bypDiv = document.createElement('div'); bypDiv.className = 'node';
         let bypHTML = '';
         const sortedByproducts = Object.keys(totalByproducts).sort();
         if (sortedByproducts.length > 0) {
             sortedByproducts.forEach(item => {
-                let remaining = globalByproducts[item] || 0; 
+                let remaining = stableByproducts[item] || 0;
                 let note = "";
                 if (remaining < totalByproducts[item]) {
                     note = ` <span style="font-size:0.8em; color:#888;">(${formatVal(totalByproducts[item] - remaining)} recycled)</span>`;
@@ -565,22 +658,28 @@ function calculatePass(p, isGhost) {
         } else {
             bypHTML = `<div class="node-content"><span class="details" style="font-style:italic">None</span></div>`;
         }
-        bypDiv.innerHTML = bypHTML; treeContainer.appendChild(bypDiv);
+
+        bypDiv.innerHTML = bypHTML;
+        if (reqContainer) {
+            reqContainer.appendChild(createCollapsibleSection("Byproducts", bypDiv, 'section-byproducts'));
+        } else {
+            treeContainer.appendChild(createCollapsibleSection("Byproducts", bypDiv, 'section-byproducts'));
+        }
 
         // --- FLATTEN AGGREGATION FOR UI ---
         let flatMax = {};
         let flatMin = {};
-        
+
         Object.keys(machineStats).forEach(mName => {
             let totalIntMax = 0;
             let totalCeiledMin = 0;
-            
+
             Object.keys(machineStats[mName]).forEach(outItem => {
                 const data = machineStats[mName][outItem];
                 totalIntMax += data.nodeSumInt;
                 totalCeiledMin += Math.ceil(data.rawFloat - 0.0001);
             });
-            
+
             flatMax[mName] = totalIntMax;
             flatMin[mName] = totalCeiledMin;
         });
@@ -595,7 +694,7 @@ function calculatePass(p, isGhost) {
         });
 
         updateConstructionList(flatMax, flatMin, totalFurnaces);
-        
+
         updateSummaryBox(p, globalHeatLoad, globalBioLoad, globalCostPerMin, primaryRenderRate, globalFuelDemandItems, globalFertDemandItems);
     }
 }
