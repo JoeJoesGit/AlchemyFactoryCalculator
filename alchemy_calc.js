@@ -100,6 +100,28 @@ function calculate() {
             document.getElementById('rateLabel').innerText = `Rate (Items/Min): ${lbl}`;
         }
 
+        // --- EMPTY STATE HANDLING ---
+        if (!targetItem || !DB.items[targetItem]) {
+            document.getElementById('summary-container').innerHTML = `
+                <div class="summary-box">
+                    <div class="stat-block"><span class="stat-label">Net Output</span><span class="stat-value">0.0 / min</span></div>
+                    <div class="stat-block"><span class="stat-label">Internal Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: 0.0 P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: 0.00 V/s</span></div>
+                    <div class="stat-block"><span class="stat-label">External Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: 0.0 P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: 0.00 V/s</span></div>
+                    <div class="stat-block"><span class="stat-label">Total Raw Cost</span><span class="stat-value gold-cost">0 G/m</span></div>
+                    <div class="stat-block"><span class="stat-label">Belt Usage (Net)</span><span class="stat-value" style="font-size:1.1em; color:#aaa;">0%</span><span class="stat-sub">Cap: ${params.beltSpeed}/m</span></div>
+                </div>`;
+
+            document.getElementById('tree').innerHTML = `
+                <div style="text-align:center; padding:40px; color:#666; font-style:italic;">
+                    <h3>Select an Item to get started...</h3>
+                    <p>Use the search box above to choose a production target.</p>
+                </div>`;
+
+            document.getElementById('construction-list').innerHTML = '';
+            document.getElementById('total-mats-container').innerText = '';
+            return;
+        }
+
         // --- PASS 1: GHOST CALCULATION (Discovery) ---
         globalByproducts = {};
         calculatePass(params, true);
@@ -273,6 +295,8 @@ function calculatePass(p, isGhost) {
     }
 
     const treeContainer = document.getElementById('tree');
+    const reqContainer = document.getElementById('requirements-area');
+    if (reqContainer) reqContainer.innerHTML = '';
 
     // Recursive Builder
     function buildNode(item, rate, isInternalModule, ancestors = [], forceGhost = false, isMeasurement = false) {
@@ -382,7 +406,8 @@ function calculatePass(p, isGhost) {
                     if (itemDef.buyPrice) {
                         let c = netRate * itemDef.buyPrice;
                         globalCostPerMin += c;
-                        costTag = `<span class="cost-tag">${Math.ceil(c).toLocaleString()} G/m</span>`;
+                        // Use formatCurrency for cost tag
+                        costTag = `<span class="cost-tag">${formatCurrency(c)}/m</span>`;
                     }
                     detailsTag = `<span class="details">(Raw Input)</span>`;
                 }
@@ -532,43 +557,54 @@ function calculatePass(p, isGhost) {
     if (p.targetItem) {
         const root = buildNode(p.targetItem, primaryRenderRate, false, []);
         if (!isGhost) {
-            let label = `--- Primary Production Chain (${p.targetItem}) ---`;
+            let label = `Primary Production Chain (${formatVal(primaryRenderRate)}/m ${p.targetItem})`;
             if (absorbedFuel && absorbedFert) { label += ` <span style="font-size:0.8em; color:#aaa; font-style:italic;">(Includes Internal Fuel & Fert)</span>`; }
             else if (absorbedFuel) { label += ` <span style="font-size:0.8em; color:#aaa; font-style:italic;">(Includes Internal Fuel)</span>`; }
             else if (absorbedFert) { label += ` <span style="font-size:0.8em; color:#aaa; font-style:italic;">(Includes Internal Fert)</span>`; }
 
-            const h = document.createElement('div'); h.className = 'section-header'; h.innerHTML = label; treeContainer.appendChild(h);
-            treeContainer.appendChild(root);
+            const sectionContent = document.createElement('div');
+            sectionContent.appendChild(root);
+
+            const section = createCollapsibleSection(label, sectionContent, 'section-primary-chain');
+            treeContainer.appendChild(section);
         }
     }
 
     if (!isGhost) {
         if (p.selfFert && stableFertDemand > 0) {
             const grossFertNeeded = stableFertDemand;
+            const title = `Internal Nutrient Module (${formatVal(grossFertNeeded)}/m ${p.selectedFert})`;
             if (absorbedFert) {
-                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Nutrient Source: <strong>${p.selectedFert}</strong> (Supplied by Main Output)<br>Total Required: ${grossFertNeeded.toFixed(1)}/m</div>`; treeContainer.appendChild(note);
+                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Nutrient Source: <strong>${p.selectedFert}</strong> (Supplied by Main Output)<br>Total Required: ${grossFertNeeded.toFixed(1)}/m</div>`;
+                treeContainer.appendChild(createCollapsibleSection(title, note, 'section-internal-fert'));
             } else {
-                const h = document.createElement('div'); h.className = 'section-header'; h.innerText = `--- Internal Nutrient Module (${p.selectedFert}) ---`; treeContainer.appendChild(h); rowCounter = 0;
-                treeContainer.appendChild(buildNode(p.selectedFert, grossFertNeeded, true, []));
+                const moduleRoot = buildNode(p.selectedFert, grossFertNeeded, true, []);
+                const moduleContent = document.createElement('div');
+                moduleContent.appendChild(moduleRoot);
+                treeContainer.appendChild(createCollapsibleSection(title, moduleContent, 'section-internal-fert'));
             }
         }
 
         if (p.selfFeed && stableFuelDemand > 0) {
             const grossFuelNeeded = stableFuelDemand;
+            const title = `Internal Heat Module (${formatVal(grossFuelNeeded)}/m ${p.selectedFuel})`;
             if (absorbedFuel) {
-                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Fuel Source: <strong>${p.selectedFuel}</strong> (Supplied by Main Output)<br>Total Required: ${grossFuelNeeded.toFixed(1)}/m</div>`; treeContainer.appendChild(note);
+                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Fuel Source: <strong>${p.selectedFuel}</strong> (Supplied by Main Output)<br>Total Required: ${grossFuelNeeded.toFixed(1)}/m</div>`;
+                treeContainer.appendChild(createCollapsibleSection(title, note, 'section-internal-heat'));
             } else {
-                const h = document.createElement('div'); h.className = 'section-header'; h.innerText = `--- Internal Heat Module (${p.selectedFuel}) ---`; treeContainer.appendChild(h); rowCounter = 0;
-                treeContainer.appendChild(buildNode(p.selectedFuel, grossFuelNeeded, true, []));
+                const moduleRoot = buildNode(p.selectedFuel, grossFuelNeeded, true, []);
+                const moduleContent = document.createElement('div');
+                moduleContent.appendChild(moduleRoot);
+                treeContainer.appendChild(createCollapsibleSection(title, moduleContent, 'section-internal-heat'));
             }
         }
     }
 
     if (!isGhost) {
         // --- SUMMARY & EXTERNALS ---
-        const extH = document.createElement('div'); extH.className = 'section-header'; extH.innerText = `--- External Inputs ---`; treeContainer.appendChild(extH);
+        // Use formatCurrency in External Input Summary
         const extDiv = document.createElement('div'); extDiv.className = 'node';
-        let extHTML = `<div class="node-content" style="margin-bottom:5px;"><span class="qty" style="color:var(--gold)">${Math.ceil(globalCostPerMin).toLocaleString()} G/m</span><strong>Raw Material Cost</strong></div>`;
+        let extHTML = `<div class="node-content" style="margin-bottom:5px;"><span class="qty" style="color:var(--gold)">${formatCurrency(globalCostPerMin)}/m</span><strong>Raw Material Cost</strong></div>`;
 
         if (!p.selfFeed && globalFuelDemandItems > 0) {
             let needed = globalFuelDemandItems;
@@ -599,9 +635,14 @@ function calculatePass(p, isGhost) {
             if (needed > 0.01) extHTML += `<div class="node-content" style="margin-bottom:5px;"><span class="qty" style="color:var(--bio)">${needed.toFixed(1)}/m</span><strong>${p.selectedFert}</strong> ${label}</div>`;
         }
 
-        extDiv.innerHTML = extHTML; treeContainer.appendChild(extDiv);
+        extDiv.innerHTML = extHTML;
+        if (reqContainer) {
+            reqContainer.appendChild(createCollapsibleSection("External Inputs", extDiv, 'section-external-inputs'));
+        } else {
+            treeContainer.appendChild(createCollapsibleSection("External Inputs", extDiv, 'section-external-inputs'));
+        }
 
-        const bypHeader = document.createElement('div'); bypHeader.className = 'section-header'; bypHeader.innerText = `--- BYPRODUCTS ---`; treeContainer.appendChild(bypHeader);
+        // --- BYPRODUCTS LOGIC ---
         const bypDiv = document.createElement('div'); bypDiv.className = 'node';
         let bypHTML = '';
         const sortedByproducts = Object.keys(totalByproducts).sort();
@@ -617,7 +658,13 @@ function calculatePass(p, isGhost) {
         } else {
             bypHTML = `<div class="node-content"><span class="details" style="font-style:italic">None</span></div>`;
         }
-        bypDiv.innerHTML = bypHTML; treeContainer.appendChild(bypDiv);
+
+        bypDiv.innerHTML = bypHTML;
+        if (reqContainer) {
+            reqContainer.appendChild(createCollapsibleSection("Byproducts", bypDiv, 'section-byproducts'));
+        } else {
+            treeContainer.appendChild(createCollapsibleSection("Byproducts", bypDiv, 'section-byproducts'));
+        }
 
         // --- FLATTEN AGGREGATION FOR UI ---
         let flatMax = {};

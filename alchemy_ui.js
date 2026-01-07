@@ -4,7 +4,7 @@
    ========================================================================== */
 
 let DB = null;
-const APP_VERSION = "v98"; // UI Version
+const APP_VERSION = "v99"; // UI Version
 const OLD_STORAGE_KEY = "alchemy_factory_save_v1"; // Deprecated key
 const SETTINGS_KEY = "alchemy_settings_v1";        // User Prefs (Belt level, etc)
 const CUSTOM_DB_KEY = "alchemy_custom_db_v1";      // Custom Recipe Data
@@ -19,7 +19,8 @@ const DEFAULT_SETTINGS = {
     defaultFuel: "Plank",
     defaultFert: "Basic Fertilizer",
     preferredRecipes: {},
-    activeRecyclers: {} // Now stores { "ItemName": true }
+    activeRecyclers: {}, // Now stores { "ItemName": true }
+    sectionStates: {}   // Stores { "Section Title": isCollapsedBoolean }
 };
 
 let isSelfFuel = false;
@@ -91,7 +92,7 @@ function init() {
         try {
             const userSettings = JSON.parse(savedSettings);
             // Overlay known settings fields
-            ['lvlBelt', 'lvlSpeed', 'lvlAlchemy', 'lvlFuel', 'lvlFert', 'defaultFuel', 'defaultFert', 'preferredRecipes', 'activeRecyclers'].forEach(key => {
+            ['lvlBelt', 'lvlSpeed', 'lvlAlchemy', 'lvlFuel', 'lvlFert', 'defaultFuel', 'defaultFert', 'preferredRecipes', 'activeRecyclers', 'sectionStates'].forEach(key => {
                 if (userSettings[key] !== undefined) {
                     DB.settings[key] = userSettings[key];
                 }
@@ -105,22 +106,92 @@ function init() {
     if (DB.settings.activeRecyclers) {
         activeRecyclers = DB.settings.activeRecyclers;
     }
+    if (DB.settings.sectionStates) {
+        window.sectionStates = DB.settings.sectionStates;
+    }
 
     // 4. UI INITIALIZATION
+    // 4. UI INITIALIZATION
     const urlParams = new URLSearchParams(window.location.search);
-    const urlItem = urlParams.get('item');
-    const urlRate = urlParams.get('rate');
 
     prepareComboboxData();
     populateSelects();
     loadSettingsToUI();
     renderSlider();
-    createDataList();
+    // createDataList(); // Removed: Undefined function handling legacy datalists
 
-    if (urlItem && urlRate) {
-        document.getElementById('targetItemInput').value = decodeURIComponent(urlItem);
+    // Helper for CI params
+    const getParam = (k) => {
+        const key = Array.from(urlParams.keys()).find(key => key.toLowerCase() === k.toLowerCase());
+        return key ? urlParams.get(key) : null;
+    };
+
+    // 5. URL PARAMETER HANDLING (Case-Insensitive)
+    const urlUpgrades = getParam('setupgrades');
+    const urlHeat = getParam('heat');
+    const urlFert = getParam('fert');
+    const urlItem = getParam('item');
+    const urlRate = getParam('rate');
+    const urlLoad = getParam('load');
+
+    if (urlUpgrades) {
+        const parts = urlUpgrades.split(',');
+        // Map: [0]Belt, [2]Speed, [3]Alchemy, [4]Fuel, [5]Fert
+        if (parts[0]) document.getElementById('lvlBelt').value = parseInt(parts[0]) || 0;
+        if (parts[2]) document.getElementById('lvlSpeed').value = parseInt(parts[2]) || 0;
+        if (parts[3]) document.getElementById('lvlAlchemy').value = parseInt(parts[3]) || 0;
+        if (parts[4]) document.getElementById('lvlFuel').value = parseInt(parts[4]) || 0;
+        if (parts[5]) document.getElementById('lvlFert').value = parseInt(parts[5]) || 0;
+    }
+
+    if (urlHeat) {
+        const sel = document.getElementById('fuelSelect');
+        const opt = Array.from(sel.options).find(o => o.value.toLowerCase() === urlHeat.toLowerCase());
+        if (opt) sel.value = opt.value;
+    }
+
+    if (urlFert) {
+        const sel = document.getElementById('fertSelect');
+        const opt = Array.from(sel.options).find(o => o.value.toLowerCase() === urlFert.toLowerCase());
+        if (opt) sel.value = opt.value;
+    }
+
+    if (urlItem) {
+        const rawItem = decodeURIComponent(urlItem).trim();
+        let targetName = rawItem;
+
+        // Try to find a valid item in DB.items or Recipes
+        // We reuse allItemsList which is populated by prepareComboboxData() earlier
+        const matchExact = allItemsList.find(i => i.name.toLowerCase() === rawItem.toLowerCase());
+
+        if (matchExact) {
+            targetName = matchExact.name;
+        } else {
+            // Fallback: Starts With
+            const matchStart = allItemsList.find(i => i.name.toLowerCase().startsWith(rawItem.toLowerCase()));
+            if (matchStart) {
+                targetName = matchStart.name;
+            }
+        }
+
+        document.getElementById('targetItemInput').value = targetName;
         document.getElementById('targetRate').disabled = false;
-        document.getElementById('targetRate').value = urlRate;
+
+        if (urlRate) {
+            document.getElementById('targetRate').value = urlRate;
+        } else if (urlLoad) {
+            const loadVal = parseFloat(urlLoad);
+            if (!isNaN(loadVal)) {
+                const lvlBelt = parseInt(document.getElementById('lvlBelt').value) || 0;
+                const speed = getBeltSpeed(lvlBelt);
+                const calcRate = speed * loadVal;
+                document.getElementById('targetRate').value = calcRate.toFixed(2);
+            } else {
+                updateFromSlider();
+            }
+        } else {
+            updateFromSlider();
+        }
     } else {
         updateFromSlider();
     }
@@ -171,7 +242,8 @@ function persist() {
         defaultFuel: DB.settings.defaultFuel,
         defaultFert: DB.settings.defaultFert,
         preferredRecipes: DB.settings.preferredRecipes,
-        activeRecyclers: activeRecyclers
+        activeRecyclers: activeRecyclers,
+        sectionStates: window.sectionStates
     };
 
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settingsObj));
@@ -287,7 +359,23 @@ function initDbEditor() {
 
     // Recipes
     DB.recipes.forEach(r => {
+        // Main Entry
         dbFlatList.push({ type: 'recipe', key: r.id, name: r.id, machine: r.machine, ...r });
+
+        // Virtual Entries for Byproducts
+        if (r.outputs) {
+            Object.keys(r.outputs).forEach(outKey => {
+                if (outKey !== r.id) {
+                    dbFlatList.push({
+                        type: 'recipe',
+                        key: r.id,          // Points to Parent
+                        name: outKey,       // Shows as Byproduct Name
+                        machine: r.machine,
+                        virtualParent: r.id // Flag for UI
+                    });
+                }
+            });
+        }
     });
 
     // Machines
@@ -347,13 +435,13 @@ function filterDbList() {
         }
 
         div.innerHTML = `<span>${obj.name} <span class="db-subtext">(${subText})</span></span> <span class="db-type-tag ${obj.type}">${typeLabel}</span>`;
-        div.onclick = () => selectDbObject(obj.type, obj.key);
+        div.onclick = () => selectDbObject(obj.type, obj.key, obj.name);
         listEl.appendChild(div);
     });
 }
 
-function selectDbObject(type, key) {
-    currentDbSelection = { type, key };
+function selectDbObject(type, key, clickedName) {
+    currentDbSelection = { type, key, clickedName };
     document.getElementById('db-editor-title').innerText = key;
 
     // Show Report Button
@@ -413,6 +501,16 @@ function renderDbForm() {
     } else if (type === 'recipe') {
         data = DB.recipes.find(r => r.id === key);
         let formHtml = `<div class="db-form">`;
+
+        // VIRTUAL RECIPE BANNER
+        if (currentDbSelection.clickedName && currentDbSelection.clickedName !== key) {
+            formHtml += `
+            <div style="background:var(--bg-panel); border-left:4px solid #fbc02d; padding:10px; margin-bottom:15px; color:#ddd;">
+                <strong>Note:</strong> You selected <em>${currentDbSelection.clickedName}</em>.<br>
+                This allows you to edit the parent recipe: <strong>${key}</strong>.
+            </div>`;
+        }
+
         formHtml += createInput('Machine', 'text', data.machine, 'machine');
         formHtml += createInput('Base Time (sec)', 'number', data.baseTime, 'baseTime');
         formHtml += `<div class="form-group full-width"><label>Inputs</label><div class="dynamic-list" id="list-inputs"></div></div>`;
@@ -953,8 +1051,26 @@ function openRecipeModal(item, domElement) {
     document.getElementById('recipe-modal').style.display = 'flex';
 }
 function openDrillDown(item, rate) {
-    const url = `index.html?item=${encodeURIComponent(item)}&rate=${rate.toFixed(2)}`;
-    window.open(url, '_blank');
+    const params = new URLSearchParams();
+    params.set('item', item);
+    params.set('rate', rate.toFixed(2));
+
+    const lvlBelt = document.getElementById('lvlBelt').value || 0;
+    const lvlSpeed = document.getElementById('lvlSpeed').value || 0;
+    const lvlAlchemy = document.getElementById('lvlAlchemy').value || 0;
+    const lvlFuel = document.getElementById('lvlFuel').value || 0;
+    const lvlFert = document.getElementById('lvlFert').value || 0;
+
+    // Map: [0]Logistics, [1]Throw, [2]Factory, [3]Alchemy, [4]Fuel, [5]Fert
+    const upgrades = [lvlBelt, 0, lvlSpeed, lvlAlchemy, lvlFuel, lvlFert, 0, 0, 0, 0];
+    params.set('setupgrades', upgrades.join(','));
+
+    const heat = document.getElementById('fuelSelect').value;
+    const fert = document.getElementById('fertSelect').value;
+    if (heat) params.set('heat', heat);
+    if (fert) params.set('fert', fert);
+
+    window.open(`index.html?${params.toString()}`, '_blank');
 }
 function updateConstructionList(maxCounts, minCounts, furnaces) {
     const buildList = document.getElementById('construction-list'); buildList.innerHTML = '';
@@ -1011,6 +1127,24 @@ function updateConstructionList(maxCounts, minCounts, furnaces) {
         totalMatsContainer.innerHTML = totalHtml;
     }
 }
+function formatCurrency(copperVal) {
+    if (!copperVal) return `<span class="curr-c">0c</span>`;
+    // 1 Gold = 100 Silver = 100,000 Copper
+    // 1 Silver = 1000 Copper
+    const val = Math.abs(Math.floor(copperVal));
+    const gold = Math.floor(val / 100000);
+    const remGold = val % 100000;
+    const silver = Math.floor(remGold / 1000);
+    const copper = remGold % 1000;
+
+    let html = "";
+    if (gold > 0) html += `<span class="curr-g">${gold}g</span> `;
+    if (silver > 0) html += `<span class="curr-s">${silver}s</span> `;
+    if (copper > 0 || html === "") html += `<span class="curr-c">${copper}c</span>`;
+
+    return html.trim() + (copperVal < 0 ? " (Loss)" : "");
+}
+
 function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualFertNeed) {
     const targetItemDef = DB.items[p.targetItem] || {};
     let internalHeat = p.selfFeed ? heat : 0;
@@ -1021,9 +1155,11 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
     if (targetItemDef.sellPrice) {
         const revenuePerMin = p.targetRate * targetItemDef.sellPrice;
         const profit = revenuePerMin - cost;
-        profitHtml = `<div class="stat-block"><span class="stat-label">Projected Profit</span><span class="stat-value ${profit >= 0 ? 'gold-profit' : 'gold-cost'}">${Math.floor(profit).toLocaleString()} G/m</span></div>`;
+        // Use formatCurrency for profit
+        profitHtml = `<div class="stat-block"><span class="stat-label">Projected Profit</span><span class="stat-value" style="font-size:1.5em; margin-top:6px;">${formatCurrency(profit)} /m</span></div>`;
     } else {
-        profitHtml = `<div class="stat-block"><span class="stat-label">Total Raw Cost</span><span class="stat-value gold-cost">${Math.ceil(cost).toLocaleString()} G/m</span></div>`;
+        // Use formatCurrency for cost
+        profitHtml = `<div class="stat-block"><span class="stat-label">Total Raw Cost</span><span class="stat-value" style="font-size:1.5em; margin-top:6px;">${formatCurrency(cost)} /m</span></div>`;
     }
     let deductionText = [];
     if (p.selfFeed && p.targetItem === p.selectedFuel) {
@@ -1038,9 +1174,9 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
     }
     document.getElementById('summary-container').innerHTML = `
         <div class="summary-box">
-            <div class="stat-block"><span class="stat-label">Net Output</span><span class="stat-value ${p.targetRate >= 0 ? 'net-positive' : 'net-warning'}">${p.targetRate.toFixed(1)} / min</span>${deductionText.length > 0 ? `<span class=\"stat-sub\" style=\"font-size:0.75em\">${deductionText.join('<br>')}</span>` : ''}</div>
-            <div class="stat-block"><span class="stat-label">Internal Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: ${internalHeat.toFixed(1)} P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: ${formatVal(internalBio)} V/s</span></div>
-            <div class="stat-block"><span class="stat-label">External Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: ${externalHeat.toFixed(1)} P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: ${formatVal(externalBio)} V/s</span></div>
+            <div class="stat-block"><span class="stat-label">Net Output</span><span class="stat-value ${p.targetRate >= 0 ? 'net-positive' : 'net-warning'}" style="font-size:1.5em">${formatVal(p.targetRate)} / min</span>${deductionText.length > 0 ? `<span class=\"stat-sub\" style=\"font-size:0.75em\">${deductionText.join('<br>')}</span>` : ''}</div>
+            <div class="stat-block"><span class="stat-label">Internal Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: ${formatVal(internalHeat)} P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: ${formatVal(internalBio)} V/s</span></div>
+            <div class="stat-block"><span class="stat-label">External Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: ${formatVal(externalHeat)} P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: ${formatVal(externalBio)} V/s</span></div>
             ${profitHtml}
             <div class="stat-block"><span class="stat-label">Belt Usage (Net)</span><span class="stat-value" style="font-size:1.1em; color:${p.targetRate > p.beltSpeed ? '#ff5252' : '#aaa'};">${(p.targetRate / p.beltSpeed * 100).toFixed(0)}%</span><span class="stat-sub">Cap: ${p.beltSpeed}/m</span></div>
         </div>`;
@@ -1052,4 +1188,89 @@ function toggleRecycle(itemName) {
     else { activeRecyclers[itemName] = true; }
     persist(); calculate();
 }
-window.onload = init;
+window.sectionStates = {};
+function toggleSection(headerOrIcon) {
+    const panel = headerOrIcon.closest('.panel');
+    if (!panel) return;
+    panel.classList.toggle('collapsed');
+
+    // Save state
+    const titleEl = panel.querySelector('h3');
+    if (titleEl) {
+        const key = titleEl.innerText.split('(')[0].trim();
+        sectionStates[key] = panel.classList.contains('collapsed');
+        persist();
+    }
+}
+
+function restoreStaticSectionStates() {
+    const panels = document.querySelectorAll('.panel');
+    panels.forEach(panel => {
+        const titleEl = panel.querySelector('h3');
+        if (titleEl) {
+            const key = titleEl.innerText.split('(')[0].trim();
+            // Only apply if state exists (undefined means use HTML default)
+            const savedState = window.sectionStates[key];
+            if (typeof savedState !== 'undefined') {
+                if (savedState) panel.classList.add('collapsed');
+                else panel.classList.remove('collapsed');
+            }
+        }
+    });
+}
+
+function createCollapsibleSection(title, contentElement, extraClass = "") {
+    const panel = document.createElement('div');
+    const baseTitle = title.split('(')[0].trim();
+    // Check persisted state
+    const isCollapsed = window.sectionStates[baseTitle];
+    panel.className = `panel ${extraClass} ${isCollapsed ? 'collapsed' : ''}`;
+
+    const header = document.createElement('div');
+    header.className = 'panel-header';
+    header.onclick = function () { toggleSection(this); };
+    header.innerHTML = `<h3>${title}</h3><span class="toggle-icon">▼</span>`;
+
+    const content = document.createElement('div');
+    content.className = 'panel-content';
+    if (contentElement) content.appendChild(contentElement);
+
+    panel.appendChild(header);
+    panel.appendChild(content);
+    return panel;
+}
+
+function updateUpgradeSummary() {
+    const belt = document.getElementById('lvlBelt').value;
+    const speed = document.getElementById('lvlSpeed').value;
+    const alc = document.getElementById('lvlAlchemy').value;
+    const fuel = document.getElementById('lvlFuel').value;
+    const fert = document.getElementById('lvlFert').value;
+
+    const summaryEl = document.getElementById('upgradeSummary');
+    if (summaryEl) {
+        summaryEl.innerText = `Belt:${belt} Speed:${speed} Alc:${alc} Fuel:${fuel} Fert:${fert}`;
+    }
+}
+
+window.onload = function () {
+    init();
+    restoreStaticSectionStates();
+    updateUpgradeSummary();
+};
+
+function restoreStaticSectionStates() {
+    const panels = document.querySelectorAll('.panel');
+    panels.forEach(panel => {
+        const titleEl = panel.querySelector('h3');
+        if (titleEl) {
+            const key = titleEl.innerText.split('(')[0].trim();
+            // Only apply if state exists (undefined means use HTML default)
+            const savedState = window.sectionStates[key];
+            if (typeof savedState !== 'undefined') {
+                if (savedState) panel.classList.add('collapsed');
+                else panel.classList.remove('collapsed');
+            }
+        }
+    });
+}

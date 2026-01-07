@@ -1,5 +1,14 @@
 # Alchemy Factory Calculator Change Log
 
+## v99 - UI Polish & Mini-Modes
+* **UI:** **Collapsible Mini-Modes.** The "Production Goal" and "Logistics" panels now condense into a specialized "mini-mode" when collapsed. Instead of hiding completely, they display title and key inputs side-by-side, saving vertical space while keeping core controls accessible.
+* **Feature:** **State Persistence.** All collapsible sections (Construction List, Logistics, Factory Inputs, etc.) now remember their open/closed state across browser reloads.
+* **Layout:** **Logistics Consolidation.** Moved "External Inputs" and "Byproducts" to Column 3 (below Construction List) to group all logistical requirements in one area.
+* **UI:** **Summary Readability.** Increased font size for "Net Output" (1.5x) and "Profit/Cost" (1.35x) to make key metrics pop.
+* **Refinement:** **Numeric Formatting.** Updated Summary Box and Load stats to always show 2 decimal places (e.g., `120.00`). Large values now use standard abbreviations (`15.2k`, `1.5m`).
+* **UI:** **Currency Display.** Costs now display in Gold/Silver/Copper (e.g., `5g 20s`).
+* **Default:** **Construction List.** Defaults to a collapsed state on load to declutter the initial view.
+
 ## v98 - Robust Recycling Logic
 * **Fix:** **Mars Athanor Count.** Fixed a "Self-Eating Paradox" where the calculator would delete machines (Athanors) because it falsely assumed their own future output was available for free. The Render Phase now strictly adheres to the Recycling Decision Map generated during the Simulation Phase, ensuring correct machine counts (e.g., 2 Athanors for Mars instead of 1).
 * **Fix:** **Double Counting.** Fixed a bug where the available byproduct count was doubled (e.g., 480 instead of 240) due to redundant initialization in the final measurement pass. The live inventory now initializes correctly as empty before the Render Phase.
