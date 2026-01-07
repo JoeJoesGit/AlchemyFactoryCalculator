@@ -1,5 +1,29 @@
 # Alchemy Factory Calculator Change Log
 
+## v100 - Layout Perfection & Deep Logic (2026-01-07)
+* **Feature:** **External Input Toggles.**
+    * Added `[Ext]` buttons to every specific item row in the Production Tree.
+    * **Logic:** Toggling a node as "External" instantly stops recursion for that branch. The item is removed from the tree and added to the "External Inputs" list as a raw material demand.
+    * **State:** External states are specific to the current chain path (e.g., you can import "Iron Ingot" for one component but build it locally for another).
+* **Layout:** **External Inputs Overhaul.**
+    * Refactored to a **2-Column Grid** (Value | Item) for cleaner readability.
+    * Moved "Fuel" and "Fertilizer" context notes to **Subtitles** under the item name.
+    * Capped the Value column width (~35%) with text wrapping to prevent squashing other columns when costs are high.
+    * Removed redundant "External Input" labels for user-toggled sources.
+* **Refinement:** **Gap Elimination.** Fixed persistent left-side gaps in External Inputs and Byproducts panels.
+* **Refinement:** **Primary Chain Alignment.** Aligned the Production Chain content perfectly with the "P" in the Header.
+* **UI:** **Icon Polish.**
+    * Standardized all icons to **16px borderless SVGs** for a cleaner, flatter look.
+* **Feature:** **Recycle in Byproducts.**
+    * Added a "Recycle" button to the Byproducts panel that allows users to toggle recycling for specific items.
+    * **Logic:** Toggling a node as "Recycle" instantly stops recursion for that branch. The item is removed from the tree and added to the "Byproducts" list as a raw material demand.
+    * **State:** Recycle states are specific to the current chain path (e.g., you can import "Iron Ingot" for one component but build it locally for another).
+* **Fix:** **Nursery and Herbs.**
+    * Fixed a bug where the nursery and herbs were not being calculated correctly.
+    * Changed herbs to use Nursery machine and updated logic to align with calculation method for other items, and handle byproduct generation correctly.
+
+
+
 ## v99 - UI Polish & Mini-Modes
 * **UI:** **Collapsible Mini-Modes.** The "Production Goal" and "Logistics" panels now condense into a specialized "mini-mode" when collapsed. Instead of hiding completely, they display title and key inputs side-by-side, saving vertical space while keeping core controls accessible.
 * **Feature:** **State Persistence.** All collapsible sections (Construction List, Logistics, Factory Inputs, etc.) now remember their open/closed state across browser reloads.

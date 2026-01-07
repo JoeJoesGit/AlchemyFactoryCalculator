@@ -4,7 +4,7 @@
    ========================================================================== */
 
 let DB = null;
-const APP_VERSION = "v99"; // UI Version
+const APP_VERSION = "v100"; // UI Version
 const OLD_STORAGE_KEY = "alchemy_factory_save_v1"; // Deprecated key
 const SETTINGS_KEY = "alchemy_settings_v1";        // User Prefs (Belt level, etc)
 const CUSTOM_DB_KEY = "alchemy_custom_db_v1";      // Custom Recipe Data
@@ -1072,53 +1072,135 @@ function openDrillDown(item, rate) {
 
     window.open(`index.html?${params.toString()}`, '_blank');
 }
-function updateConstructionList(maxCounts, minCounts, furnaces) {
+// --- HIGHLIGHTING HELPERS ---
+function highlightNodes(selector) {
+    // Clear previous
+    document.querySelectorAll('.highlight-node').forEach(el => el.classList.remove('highlight-node'));
+    // Select
+    if (!selector) return;
+    const targets = document.querySelectorAll(selector);
+    targets.forEach(el => el.classList.add('highlight-node'));
+}
+
+function updateConstructionList(machineStats, furnaceSlotDemand, totalFurnaces = 0) {
     const buildList = document.getElementById('construction-list'); buildList.innerHTML = '';
     const totalMatsContainer = document.getElementById('total-mats-container'); totalMatsContainer.innerHTML = '';
-    const sortedMachines = Object.keys(maxCounts).sort();
+    const sortedMachines = Object.keys(machineStats).sort();
     let totalConstructionMaterials = {};
+
     sortedMachines.forEach(m => {
-        const countMax = maxCounts[m];
-        const countMin = Math.ceil(minCounts[m]);
-        if (countMax <= 0) return;
-        let label = (countMax === countMin) ? `${countMax}` : `<span style="font-size:0.9em">Min ${countMin}, Max ${countMax}</span>`;
-        const li = document.createElement('li'); li.className = 'build-group';
+        const statsObj = machineStats[m];
+        let totalMax = 0;
+        let totalMin = 0;
+        let subItems = [];
+
+        // Aggregate
+        Object.keys(statsObj).forEach(item => {
+            const data = statsObj[item];
+            totalMax += data.nodeSumInt;
+            const minForThisItem = Math.ceil(data.rawFloat - 0.0001);
+            totalMin += minForThisItem;
+            subItems.push({ item: item, count: minForThisItem });
+        });
+
+        // Add to Global Material Total
         const machineDef = DB.machines[m] || {};
         const buildCost = machineDef.buildCost;
-        let subListHtml = '';
         if (buildCost) {
-            subListHtml = `<ul class="build-sublist">`;
             Object.keys(buildCost).forEach(mat => {
-                const totalQty = buildCost[mat] * countMin;
-                subListHtml += `<li class="build-subitem"><span>${mat}</span> <span class="build-val">${totalQty}</span></li>`;
                 if (!totalConstructionMaterials[mat]) totalConstructionMaterials[mat] = 0;
-                totalConstructionMaterials[mat] += totalQty;
+                totalConstructionMaterials[mat] += buildCost[mat] * totalMin;
             });
-            subListHtml += `</ul>`;
-        } else {
-            subListHtml = `<ul class="build-sublist"><li class="build-subitem" style="color:#666;">No build data</li></ul>`;
         }
-        li.innerHTML = `<div class="build-header" onclick="toggleBuildGroup(this.parentNode)"><span><span class="build-arrow">▶</span> ${m}</span> <span class="build-count">${label}</span></div>${subListHtml}`;
+
+        if (totalMax <= 0) return;
+
+        // Header
+        let label = (totalMax === totalMin) ? `${totalMax}` : `<span style="font-size:0.9em">Min ${totalMin}, Max ${totalMax}</span>`;
+
+        // Highlighting Logic for Header
+        // Sanitize machine name for selector
+        const machAttr = m.replace(/'/g, "");
+        const headerHover = `onmouseover="highlightNodes('[data-machine=\\'${machAttr}\\']')" onmouseout="highlightNodes(null)"`;
+
+        const li = document.createElement('li'); li.className = 'build-group';
+
+        let subListHtml = `<ul class="build-sublist">`;
+        subItems.sort((a, b) => b.count - a.count).forEach(sub => {
+            const itemAttr = sub.item.replace(/'/g, "");
+            // Highlight specific machine+item
+            const rowHover = `onmouseover="highlightNodes('[data-machine=\\'${machAttr}\\'][data-item=\\'${itemAttr}\\']')" onmouseout="highlightNodes(null)"`;
+            subListHtml += `<li class="build-subitem" ${rowHover}><span>${sub.item}</span> <span class="build-val">${sub.count}</span></li>`;
+        });
+        subListHtml += `</ul>`;
+
+        li.innerHTML = `<div class="build-header" onclick="toggleBuildGroup(this.parentNode)" ${headerHover}><span><span class="build-arrow">▶</span> ${m}</span> <span class="build-count">${label}</span></div>${subListHtml}`;
         buildList.appendChild(li);
     });
-    if (furnaces > 0) {
-        const li = document.createElement('li'); li.className = 'build-group';
-        const mName = "Stone Furnace"; const count = furnaces;
-        const machineDef = DB.machines[mName] || {}; const buildCost = machineDef.buildCost;
-        let subListHtml = '';
-        if (buildCost) {
-            subListHtml = `<ul class="build-sublist">`;
-            Object.keys(buildCost).forEach(mat => {
-                const totalQty = buildCost[mat] * count;
-                subListHtml += `<li class="build-subitem"><span>${mat}</span> <span class="build-val">${totalQty}</span></li>`;
-                if (!totalConstructionMaterials[mat]) totalConstructionMaterials[mat] = 0;
-                totalConstructionMaterials[mat] += totalQty;
+
+    // --- FURNACE HANDLING ---
+    // furnaceSlotDemand is now { ParentName: { ChildMachine: totalSlots } } OR { ParentName: totalSlots (Legacy fallback) }
+    // We iterate generic parent names found in the global demand object
+    Object.keys(furnaceSlotDemand).forEach(parentName => {
+        const demandData = furnaceSlotDemand[parentName];
+        if (!demandData) return;
+
+        let totalSlots = 0;
+        let breakdown = [];
+
+        if (typeof demandData === 'object') {
+            Object.keys(demandData).forEach(childMach => {
+                let slots = demandData[childMach];
+                totalSlots += slots;
+                breakdown.push({ machine: childMach, slots: slots });
+            });
+        } else {
+            totalSlots = demandData; // Legacy/Fallback
+        }
+
+        const parentDef = DB.machines[parentName];
+        const capacity = parentDef ? (parentDef.slots || 3) : 3;
+        const totalFurnacesCalc = Math.ceil((totalSlots - 0.0001) / capacity);
+
+        if (totalFurnacesCalc > 0) {
+            // Add to Global Material Total
+            const buildCost = parentDef ? parentDef.buildCost : {};
+            if (buildCost) {
+                Object.keys(buildCost).forEach(mat => {
+                    if (!totalConstructionMaterials[mat]) totalConstructionMaterials[mat] = 0;
+                    totalConstructionMaterials[mat] += buildCost[mat] * totalFurnacesCalc;
+                });
+            }
+
+            const li = document.createElement('li'); li.className = 'build-group';
+
+            // Header Highlight: Highlight ALL children
+            // We construct a selector that targets data-machine="Child1" OR data-machine="Child2"
+            // Wait, standard machines highlight THEMSELVES. 
+            // Furnaces support OTHER machines.
+            // If we hover "Stone Furnace", we want to highlight "Crucibles", "Athanors", etc.
+
+            let childSelectors = breakdown.map(b => `[data-machine='${b.machine.replace(/'/g, "")}']`).join(',');
+            // If empty (shouldn't be), fallback
+            if (!childSelectors) childSelectors = ".nothing";
+
+            // Escape quotes for the inline attribute
+            const headerHover = `onmouseover="highlightNodes(\`${childSelectors}\`)" onmouseout="highlightNodes(null)"`;
+
+            let subListHtml = `<ul class="build-sublist">`;
+            breakdown.sort((a, b) => b.slots - a.slots).forEach(sub => {
+                const machineFurnaces = Math.ceil((sub.slots - 0.0001) / capacity);
+                const subSelector = `[data-machine='${sub.machine.replace(/'/g, "")}']`;
+                const rowHover = `onmouseover="highlightNodes(\`${subSelector}\`)" onmouseout="highlightNodes(null)"`;
+                subListHtml += `<li class="build-subitem" ${rowHover}><span>${sub.machine}</span> <span class="build-val">${machineFurnaces}</span></li>`;
             });
             subListHtml += `</ul>`;
+
+            li.innerHTML = `<div class="build-header" style="border-top:1px dashed #555" onclick="toggleBuildGroup(this.parentNode)" ${headerHover}><span><span class="build-arrow">▶</span> ${parentName} (Min)</span> <span class="build-count" style="color:var(--warn)">${totalFurnacesCalc}</span></div>${subListHtml}`;
+            buildList.appendChild(li);
         }
-        li.innerHTML = `<div class="build-header" style="border-top:1px dashed #555" onclick="toggleBuildGroup(this.parentNode)"><span><span class="build-arrow">▶</span> Stone Furnace (Min)</span> <span class="build-count" style="color:var(--warn)">${count}</span></div>${subListHtml}`;
-        buildList.appendChild(li);
-    }
+    });
+
     if (Object.keys(totalConstructionMaterials).length > 0) {
         let totalHtml = `<div class="total-mats-header">Total Materials Required (Minimum)</div>`;
         Object.keys(totalConstructionMaterials).sort().forEach(mat => {

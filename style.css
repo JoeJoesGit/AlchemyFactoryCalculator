@@ -1731,6 +1731,312 @@ button.reset-btn:hover {
     margin-bottom: 10px;
 }
 
+.bg-transparent {
+    background-color: transparent !important;
+    border: none !important;
+}
+
 .section-upgrades.collapsed .upgrade-summary {
     display: block;
+}
+
+/* --- HIGHLIGHTING --- */
+.highlight-node {
+    border: 2px solid var(--gold) !important;
+    background-color: rgba(255, 215, 0, 0.05);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+    transform: scale(1.02);
+    transition: all 0.15s ease;
+}
+
+/* ==========================================================================
+   SECTION: PRODUCTION CHAIN DEPTH COLORS (Evolving Biome)
+   ========================================================================== */
+.node[data-depth="0"] {
+    border-left-color: #512DA8;
+}
+
+/* Deep Purple (Start) */
+.node[data-depth="1"] {
+    border-left-color: #2962FF;
+}
+
+/* Blue */
+.node[data-depth="2"] {
+    border-left-color: #2979FF;
+}
+
+.node[data-depth="3"] {
+    border-left-color: #448AFF;
+}
+
+.node[data-depth="4"] {
+    border-left-color: #29B6F6;
+}
+
+.node[data-depth="5"] {
+    border-left-color: #03A9F4;
+}
+
+.node[data-depth="6"] {
+    border-left-color: #00BCD4;
+}
+
+/* Cyan */
+.node[data-depth="7"] {
+    border-left-color: #26C6DA;
+}
+
+.node[data-depth="8"] {
+    border-left-color: #4DB6AC;
+}
+
+.node[data-depth="9"] {
+    border-left-color: #009688;
+}
+
+/* Teal */
+.node[data-depth="10"] {
+    border-left-color: #43A047;
+}
+
+.node[data-depth="11"] {
+    border-left-color: #66BB6A;
+}
+
+/* Green */
+.node[data-depth="12"] {
+    border-left-color: #9CCC65;
+}
+
+.node[data-depth="13"] {
+    border-left-color: #D4E157;
+}
+
+.node[data-depth="14"] {
+    border-left-color: #FFEE58;
+}
+
+/* Yellow */
+.node[data-depth="15"] {
+    border-left-color: #FFCA28;
+}
+
+.node[data-depth="16"] {
+    border-left-color: #FFA000;
+}
+
+/* Amber */
+.node[data-depth="17"] {
+    border-left-color: #FB8C00;
+}
+
+.node[data-depth="18"] {
+    border-left-color: #F57C00;
+}
+
+/* Orange */
+.node[data-depth="19"] {
+    border-left-color: #E64A19;
+}
+
+/* Deep Orange (End) */
+.node[data-depth="18"] {
+    border-left-color: #F57C00;
+}
+
+/* Orange */
+
+/* ==========================================================================
+   SECTION: RECYCLE BUTTON STYLES
+   ========================================================================== */
+.btn-recycle-off {
+    background: #222 !important;
+    border: 1px solid #ab47bc !important;
+    /* Purple Border */
+    color: #ddd !important;
+    transition: all 0.2s;
+}
+
+.btn-recycle-off:hover {
+    background: #333 !important;
+    border-color: #ce93d8 !important;
+    /* Lighter Purple */
+}
+
+.btn-recycle-on {
+    background: #2e7d32 !important;
+    /* Green BG */
+    border: 1px solid #66bb6a !important;
+    /* Light Green Border */
+    color: #fff !important;
+}
+
+.btn-recycle-on:hover {
+    background: #388e3c !important;
+}
+
+.recycle-icon-green {
+    color: #4caf50;
+    /* Green Icon */
+    margin-right: 5px;
+    font-size: 1.1em;
+}
+
+.recycle-icon-white {
+    color: #fff;
+    margin-right: 5px;
+    font-size: 1.1em;
+}
+
+/* For Byproducts, we want icon only, minimal padding */
+.btn-recycle-icon-only {
+    width: 20px !important;
+    min-width: 20px !important;
+    max-width: 20px !important;
+    height: 20px !important;
+    min-height: 20px !important;
+    max-height: 20px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+    box-sizing: border-box !important;
+    line-height: 1 !important;
+    font-size: 14px !important;
+}
+
+.recycle-icon-only {
+    margin-right: 0 !important;
+    font-size: 0.9em;
+    line-height: 1;
+}
+
+/* ==========================================================================
+   SECTION: FLAT LIST (Inputs & Byproducts)
+   ========================================================================== */
+.flat-node {
+    margin-left: 0 !important;
+    border-left: none !important;
+    padding: 0 !important;
+    padding-left: 0px !important;
+    /* Removed extra indentation */
+}
+
+.flat-node .node-content {
+    margin-bottom: 1px !important;
+    /* Tightest vertical spacing */
+    padding: 2px 6px !important;
+    /* Minimal padding */
+}
+
+/* External Toggle Button */
+/* External Toggle Button */
+/* External Toggle Button */
+.btn-toggle-round {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border-radius: 50%;
+    margin-left: 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    transition: all 0.2s;
+}
+
+.btn-toggle-round svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+.btn-toggle-int {
+    color: #888;
+}
+
+.btn-toggle-int:hover {
+    color: #fff;
+    background: #333;
+}
+
+.btn-toggle-ext {
+    color: #d40000;
+}
+
+.btn-toggle-ext svg {
+    transform: scaleX(-1);
+}
+
+.btn-toggle-ext:hover {
+    background: rgba(212, 0, 0, 0.1);
+}
+
+/* --- LAYOUT REFINEMENTS --- */
+
+/* External Inputs & Byproducts Alignment */
+.section-external-inputs .panel-content,
+.section-byproducts .panel-content {
+    padding-left: 0 !important;
+}
+
+/* External Inputs Grid (2-Column Layout) */
+.ext-grid {
+    display: grid;
+    /* Col 1: Value (Cap width), Col 2: Item Name + Subtitle (takes rest) */
+    grid-template-columns: fit-content(35%) 1fr;
+    gap: 4px 12px;
+    align-items: center;
+    padding: 2px 0px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.ext-grid-val {
+    text-align: left;
+    font-weight: bold;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.1;
+}
+
+.ext-grid-item {
+    text-align: left;
+    font-weight: bold;
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    /* Stack Item Name and Note vertically */
+    justify-content: center;
+}
+
+.ext-grid-note {
+    font-size: 0.85em;
+    color: #888;
+    font-style: italic;
+    font-weight: normal;
+    white-space: normal;
+    overflow-wrap: break-word;
+    line-height: 1.1;
+    margin-top: 2px;
+    /* Small gap between Item and Note */
+    text-align: left;
+}
+
+/* Primary Chain Alignment */
+.section-primary-chain .panel-content {
+    padding-left: 5px !important;
+    /* Align content closer to header */
+}
+
+/* Fine-tune the root node position */
+.section-primary-chain .node[data-depth="0"] {
+    margin-left: 0;
+    border-left-width: 4px;
+    /* Make the purple line visible/distinct */
 }
