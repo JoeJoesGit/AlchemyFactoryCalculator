@@ -28,9 +28,10 @@ window.ALCHEMY_DB = {
         "Lavender": { "category": "Herbs", "nutrientCost": 2160 },
         "Chamomile": { "category": "Herbs", "nutrientCost": 720 },
         "Gentian": { "category": "Herbs", "nutrientCost": 6000 },
+        "Gentian Nectar": { "category": "Herbs", "nutrientCost": 6000 },
         "Gloom Fungus": { "category": "Herbs" },
         "World Tree Leaf": { "category": "Herbs" },
-        "World Tree Core": { "category": "Herbs", "buyPrice": 3000000},
+        "World Tree Core": { "category": "Herbs", "buyPrice": 3000000 },
 
         // --- 4. SOLIDS & MATERIALS ---
         "Plank": { "category": "Material", "heat": 20 },
@@ -62,8 +63,8 @@ window.ALCHEMY_DB = {
         "Gloom Spores": { "category": "Material" },
         "Volcanic Ash": { "category": "Material" },
         "Impure Copper Powder": { "category": "Material" },
-        "Copper Powder": { "category": "Material"},
-        "Crude Silver Powder": { "category": "Material"},
+        "Copper Powder": { "category": "Material" },
+        "Crude Silver Powder": { "category": "Material" },
         "Impure Silver Powder": { "category": "Material" },
         "Silver Powder": { "category": "Material" },
         "Crude Gold Dust": { "category": "Material" },
@@ -84,7 +85,7 @@ window.ALCHEMY_DB = {
 
         // --- 7. METALS ---
         "Iron Ingot": { "category": "Material" },
-        "Copper Ingot": { "category": "Material"},
+        "Copper Ingot": { "category": "Material" },
         "Bronze Ingot": { "category": "Material" },
         "Silver Ingot": { "category": "Material" },
         "Gold Ingot": { "category": "Material" },
@@ -99,7 +100,7 @@ window.ALCHEMY_DB = {
         "Wooden Pulley": { "category": "Component", "sellPrice": 44 },
         "Steel Gear": { "category": "Component", "sellPrice": 450 },
         "Copper Bearing": { "category": "Component", "sellPrice": 300 },
-        "Bronze Rivet": { "category": "Component", "sellPrice": 120},
+        "Bronze Rivet": { "category": "Component", "sellPrice": 120 },
 
         // --- 9. GOODS & CURRENCY ---
         "Linen": { "category": "Goods", "sellPrice": 165 },
@@ -121,7 +122,6 @@ window.ALCHEMY_DB = {
         "Brandy": { "category": "Liquid", "liquid": true },
         "Sulfuric Acid": { "category": "Liquid", "liquid": true },
         "Lavender Essential Oil": { "category": "Liquid", "liquid": true },
-        "Gentian Nectar": { "category": "Liquid", "liquid": true },
         "Fairy Tear": { "category": "Liquid", "liquid": true },
         "Moon Tear": { "category": "Liquid", "liquid": true },
         "Quicksilver": { "category": "Liquid", "liquid": true },
@@ -134,11 +134,11 @@ window.ALCHEMY_DB = {
         "Transformation Potion": { "category": "Potion", "sellPrice": 620 },
         "Growth Potion": { "category": "Fertilizer", "sellPrice": 1224, "nutrientValue": 6480, "maxFertility": 2160 },
         "Panacea Potion": { "category": "Fuel / Fertilizer", "sellPrice": 30000, "heat": 320000, "nutrientValue": 200000, "maxFertility": 20000 },
-        
+
         // --- 12. FERTILIZERS & CATALYSTS ---
         "Basic Fertilizer": { "category": "Fertilizer", "nutrientValue": 144, "maxFertility": 12, "buyPrice": 14 },
         "Advanced Fertilizer": { "category": "Fertilizer", "nutrientValue": 720, "maxFertility": 144, "buyPrice": 60 },
-        
+
         "Oblivion Essence": { "category": "Essence" },
         "Vitality Essence": { "category": "Essence" },
         "Unstable Catalyst": { "category": "Catalyst" },
@@ -152,7 +152,7 @@ window.ALCHEMY_DB = {
         "Broken Shard": { "category": "Gem" },
         "Dull Shard": { "category": "Gem" },
         "Shattered Crystal": { "category": "Gem" },
-        "Crude Crystal": { "category": "Gem"},
+        "Crude Crystal": { "category": "Gem" },
         "Polished Crystal": { "category": "Gem" },
         "Adamant": { "category": "Material" },
         "Diamond": { "category": "Gem", "sellPrice": 100000 },
@@ -174,15 +174,15 @@ window.ALCHEMY_DB = {
         "Mercury": { "category": "Relic", "sellPrice": 5200000 },
         "Sol": { "category": "Relic", "sellPrice": 42000000 }
     },
-    
+
     "machines": {
         "Table Saw": { "tier": 1, "heatCost": 0, "buildCost": { "Plank": 5 } },
         "Stone Crusher": { "tier": 2, "heatCost": 0, "buildCost": { "Plank": 6, "Large Wooden Gear": 6 } },
-        "Planting": { "tier": 2, "heatCost": 0, "buildCost": { "Stone": 8 } },
+        "Nursery": { "tier": 2, "heatCost": 0, "buildCost": { "Stone": 8 } },
         "Grinder": { "tier": 1, "heatCost": 0, "buildCost": { "Plank": 8 } },
         "Extractor": { "tier": 4, "heatCost": 0, "buildCost": { "Iron Ingot": 5, "Glass": 5 } },
-        "Stone Furnace": { "tier": 3, "heatSelf": 1, "slots": 9, "isGenerator": true, "buildCost": { "Stone": 20 } }, 
-        "Blast Furnace": { "tier": 6, "heatSelf": 4.0, "slots": 42, "isGenerator": true, "buildCost": { "Brick": 30 } }, 
+        "Stone Furnace": { "tier": 3, "heatSelf": 1, "slots": 9, "isGenerator": true, "buildCost": { "Stone": 20 } },
+        "Blast Furnace": { "tier": 6, "heatSelf": 4.0, "slots": 42, "isGenerator": true, "buildCost": { "Brick": 30 } },
         "Crucible": { "tier": 4, "heatCost": 4.0, "parent": "Stone Furnace", "slotsRequired": 3, "buildCost": { "Stone": 4 } },
         "Kiln": { "tier": 4, "heatCost": 15.0, "parent": "Stone Furnace", "slotsRequired": 6, "buildCost": { "Stone": 20, "Clay": 10 } },
         "Iron Smelter": { "tier": 3, "heatCost": 9.0, "parent": "Stone Furnace", "slotsRequired": 9, "buildCost": { "Stone": 15 } },
@@ -209,15 +209,15 @@ window.ALCHEMY_DB = {
         "World Tree Nursery": { "tier": 8, "heatCost": 0, "buildCost": { "Adamant": 10, "World Tree Leaf": 5 } },
         "Knowledge Altar": { "tier": 5, "heatCost": 0, "buildCost": { "Stone": 50, "Gold Ingot": 10 } }
     },
-    
+
     "recipes": [
         // --- HERBS & SEEDS ---
-        { "id": "Flax", "machine": "Planting", "inputs": { "Flax Seed": 1 }, "outputs": { "Flax": 200 }, "baseTime": 400.0 },
-        { "id": "Sage", "machine": "Planting", "inputs": { "Sage Seed": 1 }, "outputs": { "Sage": 180 }, "baseTime": 540.0 },
-        { "id": "Redcurrant", "machine": "Planting", "inputs": { "Red Currant Seed": 1 }, "outputs": { "Redcurrant": 150 }, "baseTime": 900.0 },
-        { "id": "Lavender", "machine": "Planting", "inputs": { "Lavender Seed": 1 }, "outputs": { "Lavender": 120 }, "baseTime": 1440.0 },
-        { "id": "Chamomile", "machine": "Planting", "inputs": { "Chamomile Seed": 1 }, "outputs": { "Chamomile": 140 }, "baseTime": 1120.0 },
-        { "id": "Gentian", "machine": "Planting", "inputs": { "Gentian Seed": 1 }, "outputs": { "Gentian": 80, "Gentian Nectar": 80 }, "baseTime": 2160.0 },
+        { "id": "Flax", "machine": "Nursery", "inputs": { "Flax Seed": 1 }, "outputs": { "Flax": 200 }, "baseTime": 400.0 },
+        { "id": "Sage", "machine": "Nursery", "inputs": { "Sage Seed": 1 }, "outputs": { "Sage": 180 }, "baseTime": 540.0 },
+        { "id": "Redcurrant", "machine": "Nursery", "inputs": { "Red Currant Seed": 1 }, "outputs": { "Redcurrant": 150 }, "baseTime": 900.0 },
+        { "id": "Lavender", "machine": "Nursery", "inputs": { "Lavender Seed": 1 }, "outputs": { "Lavender": 120 }, "baseTime": 1440.0 },
+        { "id": "Chamomile", "machine": "Nursery", "inputs": { "Chamomile Seed": 1 }, "outputs": { "Chamomile": 140 }, "baseTime": 1120.0 },
+        { "id": "Gentian", "machine": "Nursery", "inputs": { "Gentian Seed": 1 }, "outputs": { "Gentian": 80, "Gentian Nectar": 80 }, "baseTime": 2160.0 },
 
         // --- BASICS ---
         { "id": "Plank", "machine": "Table Saw", "inputs": { "Logs": 1 }, "outputs": { "Plank": 200 }, "baseTime": 400.0 },
@@ -272,21 +272,21 @@ window.ALCHEMY_DB = {
         { "id": "Charcoal Powder", "machine": "Grinder", "inputs": { "Charcoal": 1 }, "outputs": { "Charcoal Powder": 1 }, "baseTime": 4.0 },
         { "id": "Coal", "machine": "Stone Crusher", "inputs": { "Coal Ore": 1 }, "outputs": { "Coal": 120 }, "baseTime": 360.0 },
         // --- COKE BATCH (Converted from 50% fail rate) ---
-        { 
-            "id": "Coke", "machine": "Athanor", 
-            "inputs": { "Charcoal Powder": 12 }, 
-            "outputs": { "Coke": 1, "Charcoal": 2 }, 
-            "baseTime": 6.0 
+        {
+            "id": "Coke", "machine": "Athanor",
+            "inputs": { "Charcoal Powder": 12 },
+            "outputs": { "Coke": 1, "Charcoal": 2 },
+            "baseTime": 6.0
         },
         { "id": "Coke Powder", "machine": "Grinder", "inputs": { "Coke": 1 }, "outputs": { "Coke Powder": 1 }, "baseTime": 12.0 },
-        
+
         // --- IRON / STEEL / SULFUR ---
         { "id": "Iron Ingot", "machine": "Iron Smelter", "inputs": { "Iron Ore": 1 }, "outputs": { "Iron Ingot": 100 }, "baseTime": 600.0 },
         { "id": "Iron Sand", "machine": "Grinder", "inputs": { "Iron Ingot": 1 }, "outputs": { "Iron Sand": 1 }, "baseTime": 30.0 },
         // --- STEEL BATCH (Converted from 25% fail rate) ---
         {
             "id": "Steel Ingot", "machine": "Athanor",
-            "inputs": { "Iron Ingot": 4, "Coke Powder": 4 }, 
+            "inputs": { "Iron Ingot": 4, "Coke Powder": 4 },
             "outputs": { "Steel Ingot": 1, "Iron Ingot": 3 },
             "baseTime": 16.0
         },
@@ -298,7 +298,7 @@ window.ALCHEMY_DB = {
         // --- COPPER POWDER BATCH (50%) ---
         {
             "id": "Copper Powder", "machine": "Athanor",
-            "inputs": { "Iron Sand": 12, "Soap Powder": 12 }, 
+            "inputs": { "Iron Sand": 12, "Soap Powder": 12 },
             "outputs": { "Copper Powder": 1, "Impure Copper Powder": 1 },
             "baseTime": 12.0
         },
@@ -309,10 +309,10 @@ window.ALCHEMY_DB = {
         // --- SILVER ---
         { "id": "Impure Silver Powder", "machine": "Refiner", "inputs": { "Crude Silver Powder": 2 }, "outputs": { "Impure Silver Powder": 1 }, "baseTime": 8.0 },
         // --- SILVER POWDER BATCH (20%) ---
-        { 
-            "id": "Silver Powder", "machine": "Advanced Athanor", 
-            "inputs": { "Copper Powder": 10, "Unstable Catalyst": 10, "Black Powder": 10 }, 
-            "outputs": { "Silver Powder": 1, "Impure Silver Powder": 4 }, 
+        {
+            "id": "Silver Powder", "machine": "Advanced Athanor",
+            "inputs": { "Copper Powder": 10, "Unstable Catalyst": 10, "Black Powder": 10 },
+            "outputs": { "Silver Powder": 1, "Impure Silver Powder": 4 },
             "baseTime": 32.0
         },
         { "id": "Silver Ingot", "machine": "Crucible", "inputs": { "Silver Powder": 1 }, "outputs": { "Silver Ingot": 1 }, "baseTime": 16.0 },
@@ -374,25 +374,25 @@ window.ALCHEMY_DB = {
         // --- GEM PRODUCTS ---
         { "id": "Turquoise", "machine": "Assembler", "inputs": { "Healing Potion": 2, "Sand": 12 }, "outputs": { "Turquoise": 1 }, "baseTime": 12.0 },
         // --- MALACHITE BATCH (50%) ---
-        { 
-            "id": "Malachite", "machine": "Athanor", 
-            "inputs": { "Impure Copper Powder": 4, "Clay Powder": 12 }, 
-            "outputs": { "Malachite": 1, "Crude Shard": 1 }, 
+        {
+            "id": "Malachite", "machine": "Athanor",
+            "inputs": { "Impure Copper Powder": 4, "Clay Powder": 12 },
+            "outputs": { "Malachite": 1, "Crude Shard": 1 },
             "baseTime": 24.0
         },
         { "id": "Topaz", "machine": "Blender", "inputs": { "Crude Shard": 1, "Sulfuric Acid": 30 }, "outputs": { "Topaz": 1 }, "baseTime": 12.0 },
         // --- LAPIS BATCH (33%) ---
-        { 
-            "id": "Lapis Lazuli", "machine": "Advanced Athanor", 
-            "inputs": { "Impure Silver Powder": 3, "Crude Shard": 12, "Gentian Powder": 12 }, 
+        {
+            "id": "Lapis Lazuli", "machine": "Advanced Athanor",
+            "inputs": { "Impure Silver Powder": 3, "Crude Shard": 12, "Gentian Powder": 12 },
             "outputs": { "Lapis Lazuli": 1, "Crude Shard": 1, "Shattered Crystal": 1 }, // Est: 0.5 shard + 0.5 crystal -> 1.5 fails?
             "baseTime": 36.0
         },
         // --- OBSIDIAN BATCH (50%) ---
-        { 
-            "id": "Obsidian", "machine": "Advanced Athanor", 
-            "inputs": { "Oblivion Essence": 2, "Crude Crystal": 2, "Unstable Catalyst": 2 }, 
-            "outputs": { "Obsidian": 1, "Volcanic Ash": 1 }, 
+        {
+            "id": "Obsidian", "machine": "Advanced Athanor",
+            "inputs": { "Oblivion Essence": 2, "Crude Crystal": 2, "Unstable Catalyst": 2 },
+            "outputs": { "Obsidian": 1, "Volcanic Ash": 1 },
             "baseTime": 12.0
         },
         { "id": "Ruby", "machine": "Cauldron", "inputs": { "Diamond": 1, "Gold Dust": 1, "Resonant Catalyst": 1 }, "outputs": { "Ruby": 1 }, "baseTime": 30.9 },
@@ -400,15 +400,15 @@ window.ALCHEMY_DB = {
         { "id": "Emerald", "machine": "Cauldron", "inputs": { "Moonlit Soap": 1, "Lapis Lazuli": 1, "Resonant Catalyst": 1 }, "outputs": { "Emerald": 1 }, "baseTime": 45.5 },
 
         // --- METEORITE MEGA-RECIPE ---
-        { 
-            "id": "Meteorite Processing", "machine": "Stone Crusher", 
-            "inputs": { "Meteorite": 1 }, 
-            "outputs": { 
-                "Stone": 300, "Coal": 300, "Iron Sand": 300, 
+        {
+            "id": "Meteorite Processing", "machine": "Stone Crusher",
+            "inputs": { "Meteorite": 1 },
+            "outputs": {
+                "Stone": 300, "Coal": 300, "Iron Sand": 300,
                 "Shattered Crystal": 60, "Obsidian": 30, "Adamant": 7,
-                "Ruby": 1, "Sapphire": 1, "Emerald": 1 
-            }, 
-            "baseTime": 1200.0 
+                "Ruby": 1, "Sapphire": 1, "Emerald": 1
+            },
+            "baseTime": 1200.0
         },
 
         // --- RELICS ---
@@ -423,36 +423,36 @@ window.ALCHEMY_DB = {
         { "id": "Sol", "machine": "Arcane Shaper", "inputs": { "Jupiter": 1, "Saturn": 1, "Mars": 1, "Venus": 1, "Mercury": 1, "Luna": 1, "Diamond": 25, "Eternal Catalyst": 5, "World Tree Core": 5 }, "outputs": { "Sol": 1 }, "baseTime": 300.0 },
 
         // --- 15. ALTERNATE RECIPES ---
-        { 
-            "id": "Coke_Alt", "machine": "Crucible", 
-            "inputs": { "Coal": 1 }, "outputs": { "Coke": 1 }, 
-            "baseTime": 6.0 
+        {
+            "id": "Coke_Alt", "machine": "Crucible",
+            "inputs": { "Coal": 1 }, "outputs": { "Coke": 1 },
+            "baseTime": 6.0
         },
-        { 
-            "id": "SilverPowder3_Alt", "machine": "Advanced Athanor", 
-            "inputs": { "Impure Silver Powder": 2 }, "outputs": { "Silver Powder": 1 }, 
-            "baseTime": 8.0 
+        {
+            "id": "SilverPowder3_Alt", "machine": "Advanced Athanor",
+            "inputs": { "Impure Silver Powder": 2 }, "outputs": { "Silver Powder": 1 },
+            "baseTime": 8.0
         },
-        { 
-            "id": "GoldDust3_Alt", "machine": "Advanced Athanor", 
-            "inputs": { "Impure Gold Dust": 2 }, "outputs": { "Gold Dust": 1 }, 
-            "baseTime": 10.0 
+        {
+            "id": "GoldDust3_Alt", "machine": "Advanced Athanor",
+            "inputs": { "Impure Gold Dust": 2 }, "outputs": { "Gold Dust": 1 },
+            "baseTime": 10.0
         },
         // --- Reverse Crafting (Coins -> Ingots) ---
-        { 
-            "id": "CopperIngot_Alt", "machine": "Crucible", 
-            "inputs": { "Copper Coin": 400 }, "outputs": { "Copper Ingot": 1 }, 
-            "baseTime": 12.0 
+        {
+            "id": "CopperIngot_Alt", "machine": "Crucible",
+            "inputs": { "Copper Coin": 400 }, "outputs": { "Copper Ingot": 1 },
+            "baseTime": 12.0
         },
-        { 
-            "id": "SilverIngot_Alt", "machine": "Crucible", 
-            "inputs": { "Silver Coin": 6 }, "outputs": { "Silver Ingot": 1 }, 
-            "baseTime": 16.0 
+        {
+            "id": "SilverIngot_Alt", "machine": "Crucible",
+            "inputs": { "Silver Coin": 6 }, "outputs": { "Silver Ingot": 1 },
+            "baseTime": 16.0
         },
-        { 
-            "id": "GoldIngot_Alt", "machine": "Crucible", 
-            "inputs": { "Gold Coin": 3 }, "outputs": { "Gold Ingot": 1 }, 
-            "baseTime": 40.0 
+        {
+            "id": "GoldIngot_Alt", "machine": "Crucible",
+            "inputs": { "Gold Coin": 3 }, "outputs": { "Gold Ingot": 1 },
+            "baseTime": 40.0
         },
         // --- ENHANCED GRINDER ALTERNATE RECIPES ---
         // (Base times are halved to represent 2x Machine Speed)
