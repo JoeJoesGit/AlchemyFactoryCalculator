@@ -21,6 +21,8 @@
 * **Fix:** **Nursery and Herbs.**
     * Fixed a bug where the nursery and herbs were not being calculated correctly.
     * Changed herbs to use Nursery machine and updated logic to align with calculation method for other items, and handle byproduct generation correctly.
+* **Fix:** **Max Cap Display.**
+    * Fixed the "Show Machine Max Cap" toggle which was failing to render the theoretical maximum output in the production tree due to a variable scope issue.
 
 
 
