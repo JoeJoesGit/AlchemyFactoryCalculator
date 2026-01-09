@@ -586,7 +586,7 @@ function calculatePass(p, isGhost) {
                     const itemNameForAttr = item.replace(/'/g, "");
                     const machineName = recipe.machine; // Assuming recipe.machine is the machine name
                     const plural = Math.ceil(machinesNeeded) === 1 ? '' : 's'; // Determine pluralization
-                    machineTag = `<span class="machine-tag" onmouseover="highlightMachine('${machineName}')" onmouseout="removeHighlight()">${Math.ceil(machinesNeeded)} ${machineName}${plural}</span>`;
+                    machineTag = `<span class="machine-tag" title="${tooltipText}" onmouseover="highlightMachine('${machineName}')" onmouseout="removeHighlight()">${Math.ceil(machinesNeeded)} ${machineName}${plural}</span>`;
 
                     // Add ExtTag to normal nodes too - MOVED to Action Buttons
                     // outputTag += extTag;

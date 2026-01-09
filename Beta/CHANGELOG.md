@@ -23,6 +23,8 @@
     * Changed herbs to use Nursery machine and updated logic to align with calculation method for other items, and handle byproduct generation correctly.
 * **Fix:** **Max Cap Display.**
     * Fixed the "Show Machine Max Cap" toggle which was failing to render the theoretical maximum output in the production tree due to a variable scope issue.
+* **Fix:** **Machine Tooltips.**
+    * Restored the missing mouse-over tooltips for Production Machines, which correctly display Recipe input/output, Cycle Time, and Throughput stats.
 
 
 
