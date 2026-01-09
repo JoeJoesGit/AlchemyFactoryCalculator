@@ -367,7 +367,7 @@ function calculatePass(p, isGhost) {
         if (!effectiveGhost) { rowCounter++; myRowID = rowCounter; }
 
         let outputTag = ""; let machineTag = ""; let heatTag = ""; let swapBtn = "";
-        let bioTag = ""; let costTag = ""; let detailsTag = ""; let recycleTag = "";
+        let bioTag = ""; let costTag = ""; let detailsTag = ""; let recycleTag = ""; let capTag = "";
         let machinesNeeded = 0; let hasChildren = false;
 
         let isFuel = (item === p.selectedFuel); let isFert = (item === p.selectedFert);
@@ -577,7 +577,7 @@ function calculatePass(p, isGhost) {
                     let throughput = effectiveBatchesPerMin * batchYield;
                     let tooltipText = `Recipe: ${inputsStr} -> ${outputsStr}\nBase Time: ${recipe.baseTime}s\nSpeed Mult: ${p.speedMult.toFixed(2)}x\nCycle Time: ${cycleTime.toFixed(2)}s\nThroughput: ${throughput.toFixed(2)} items/min per machine`;
 
-                    let capTag = "";
+                    /* capTag declared above */
                     if (p.showMax) {
                         const maxOutput = Math.ceil(machinesNeeded) * throughput;
                         capTag = `<span class="max-cap-tag">(Max: ${formatVal(maxOutput)}/m)</span>`;
@@ -636,6 +636,7 @@ function calculatePass(p, isGhost) {
             ${detailsTag}
             ${costTag}
             ${machineTag}
+            ${capTag}
             ${bioTag}
             ${heatTag}
             ${outputTag}
