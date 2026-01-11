@@ -361,9 +361,14 @@ function updateFromSlider() {
 function switchTab(tabName) {
     document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById('view-' + tabName).classList.add('active');
-    const btnIndex = tabName === 'calc' ? 0 : 1;
-    document.querySelectorAll('.tab-btn')[btnIndex].classList.add('active');
+
+    const viewEl = document.getElementById('view-' + tabName);
+    if (viewEl) viewEl.classList.add('active');
+
+    const tabIndex = { 'calc': 0, 'db': 1, 'code': 2 }[tabName];
+    if (tabIndex !== undefined) {
+        document.querySelectorAll('.tab-btn')[tabIndex].classList.add('active');
+    }
 
     if (tabName === 'db') {
         initDbEditor();
@@ -1277,11 +1282,13 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
     }
 
     // Share Box HTML (Integrated)
+    const hasTarget = !!p.targetItem;
+    const btnState = hasTarget ? "" : "disabled style='opacity:0.5; cursor:not-allowed;'";
     const shareHtml = `
         <div class="share-row" style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center; margin-top:10px; padding-top:10px; border-top:1px dashed #444;">
-             <input type="text" id="share-code-display" readonly value="Generating..." onclick="this.select()" class="code-display-input" style="font-size:0.8em; color:#666;" title="Production Chain code for current state of calculator. Can be used to share with others to replicate this production chain precisely">
-             <button class="icon-btn" onclick="copyCodeToClipboard()" title="Copy Production Chain Code to clipboard">📋 Code</button>
-             <button class="icon-btn" onclick="copyLinkToClipboard()" title="Copy a direct link (URL) to the clipboard that included the Production Chain Code">🔗 Link</button>
+             <input type="text" id="share-code-display" readonly value="${hasTarget ? 'Generating...' : 'Select an item to generate code'}" onclick="this.select()" class="code-display-input" style="font-size:0.8em; color:#666;" title="Production Chain code for current state of calculator. Can be used to share with others to replicate this production chain precisely">
+             <button class="icon-btn" onclick="copyCodeToClipboard()" ${btnState} title="Copy Production Chain Code to clipboard">📋 Code</button>
+             <button class="icon-btn" onclick="copyLinkToClipboard()" ${btnState} title="Copy a direct link (URL) to the clipboard that included the Production Chain Code">🔗 Link</button>
              <button class="icon-btn" onclick="openImportModal()" title="Import a Production Chain Code or URL with code to display.">📥 Import</button>
         </div>
     `;
@@ -1790,4 +1797,184 @@ async function copyLinkToClipboard() {
         console.error(e);
         alert("Failed to generate link.");
     }
+}
+
+/* ==========================================================================
+   SECTION: INSPECTOR / DEBUGGER LOGIC
+   ========================================================================== */
+
+function importCurrentCodeForInspection() {
+    exportStateFromUI().then(code => {
+        document.getElementById('inspector-input').value = code;
+        inspectCode();
+    }).catch(err => {
+        console.error("Failed to generate code for inspection", err);
+        alert("Error generating code: " + err.message);
+    });
+}
+
+async function inspectCode() {
+    const rawInput = document.getElementById('inspector-input').value.trim();
+    const outRaw = document.getElementById('inspector-output-raw');
+    const outTrans = document.getElementById('inspector-output-trans');
+    const errBox = document.getElementById('inspector-error');
+
+    outRaw.textContent = "Processing...";
+    outTrans.textContent = "Processing...";
+    errBox.textContent = "";
+
+    try {
+        // 1. EXTRACT CODE
+        let code = rawInput;
+
+        // Helper: Decode HTML entities
+        const decodeHTML = (str) => {
+            const doc = new DOMParser().parseFromString(str, "text/html");
+            return doc.documentElement.textContent;
+        };
+
+        // Remove surrounding URL parts if present
+        if (code.includes('?') || code.includes('&')) {
+            // Try to parse as URL
+            try {
+                let search = code;
+                if (code.includes('?')) {
+                    search = code.split('?')[1];
+                }
+                // Decode HTML entities to handle &amp;
+                search = decodeHTML(search);
+
+                const p = new URLSearchParams(search);
+                if (p.has('code')) {
+                    code = p.get('code');
+                }
+            } catch (e) {
+                console.warn("Soft URL parse failed, using raw input");
+            }
+        }
+
+        // 2. URL-SAFE BASE64 CLEANUP
+        // + -> -, / -> _ replacement used in app
+        // App generates: .replace(/\+/g, '-').replace(/\//g, '_')
+        // We need to REVERSE that: - -> +, _ -> /
+        code = code.replace(/-/g, '+').replace(/_/g, '/');
+
+        // 3. DECOMPRESS
+        let jsonStr = "";
+        try {
+            const binary = atob(code);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+            const response = await new Response(stream);
+            jsonStr = await response.text();
+        } catch (e) {
+            throw new Error("Decompression Failed. Invalid Base64 or Gzip data.");
+        }
+
+        // 4. PARSE RAW JSON
+        const state = JSON.parse(jsonStr);
+        outRaw.textContent = JSON.stringify(state, null, 2);
+
+        // 5. TRANSLATE TO VERBOSE
+        const translated = translateState(state);
+        outTrans.textContent = JSON.stringify(translated, null, 2);
+
+    } catch (e) {
+        errBox.textContent = "Error: " + e.message;
+        outRaw.textContent = "---";
+        outTrans.textContent = "---";
+        console.error(e);
+    }
+}
+
+function translateState(state) {
+    // Logic ported from alchemy_ui.js importStateToUI
+    // Creates a DEEP COPY to return
+    const k = CODE_KEYS; // From alchemy_constants.js
+    const reg = ITEM_REGISTRY; // From alchemy_constants.js
+
+    const resolve = (val) => {
+        if (typeof val === 'number') {
+            // IDs are 1-based, Registry is 0-based
+            return reg[val - 1] || `Unknown_ID_${val}`;
+        }
+        return val;
+    };
+
+    // Detect Version
+    const verboseState = { v: state[k.v] || state.v || 1 };
+
+    // Check if Compact
+    if (state[k.target] || state[k.settings]) {
+        // --- TARGET ---
+        if (state[k.target]) {
+            verboseState.target = {
+                item: resolve(state[k.target][k.item]),
+                rate: state[k.target][k.rate]
+            };
+        }
+
+        // --- SETTINGS ---
+        if (state[k.settings]) {
+            const s = state[k.settings];
+            verboseState.settings = {
+                fuel: resolve(s[k.fuel]),
+                fert: resolve(s[k.fert]),
+                selfFeed: s[k.selfFeed] === 1,
+                selfFert: s[k.selfFert] === 1,
+                showMax: s[k.showMax] === 1
+            };
+        }
+
+        // --- UPGRADES ---
+        if (state[k.upgrades]) {
+            verboseState.upgrades = state[k.upgrades]; // Array is same format
+        }
+
+        // --- LISTS ---
+        if (state[k.lists]) {
+            const l = state[k.lists];
+            verboseState.lists = {
+                preferred: {},
+                recyclers: [],
+                externals: []
+            };
+
+            // Preferred
+            if (l[k.preferred]) {
+                for (let key in l[k.preferred]) {
+                    // Key is Item ID (or Name), Value is RecipeID
+                    // Need to parse key if it's an ID
+                    // JSON object keys are ALWAYS strings. "75": "Recipe"
+                    const itemKey = isNaN(key) ? key : resolve(parseInt(key));
+                    verboseState.lists.preferred[itemKey] = l[k.preferred][key];
+                }
+            }
+
+            // Recyclers
+            if (l[k.recyclers]) {
+                verboseState.lists.recyclers = l[k.recyclers].map(resolve);
+            }
+
+            // Externals
+            if (l[k.externals]) {
+                verboseState.lists.externals = l[k.externals].map(packed => {
+                    if (typeof packed !== 'string') return resolve(packed);
+                    return packed.split('|').map(seg => {
+                        const id = parseInt(seg);
+                        if (!isNaN(id) && reg[id - 1]) return reg[id - 1];
+                        return seg;
+                    }).join('|');
+                });
+            }
+        }
+    } else {
+        // Fallback: It's likely already verbose or old format
+        return state;
+    }
+
+    return verboseState;
 }

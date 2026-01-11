@@ -125,14 +125,9 @@ function calculate() {
 
         // --- EMPTY STATE HANDLING ---
         if (!targetItem || !DB.items[targetItem]) {
-            document.getElementById('summary-container').innerHTML = `
-                <div class="summary-box">
-                    <div class="stat-block"><span class="stat-label">Net Output</span><span class="stat-value">0.0 / min</span></div>
-                    <div class="stat-block"><span class="stat-label">Internal Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: 0.0 P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: 0.00 V/s</span></div>
-                    <div class="stat-block"><span class="stat-label">External Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: 0.0 P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: 0.00 V/s</span></div>
-                    <div class="stat-block"><span class="stat-label">Total Raw Cost</span><span class="stat-value gold-cost">0 G/m</span></div>
-                    <div class="stat-block"><span class="stat-label">Belt Usage (Net)</span><span class="stat-value" style="font-size:1.1em; color:#aaa;">0%</span><span class="stat-sub">Cap: ${params.beltSpeed}/m</span></div>
-                </div>`;
+            if (typeof updateSummaryBox === 'function') {
+                updateSummaryBox(params, 0, 0, 0, 0, 0, 0);
+            }
 
             document.getElementById('tree').innerHTML = `
                 <div style="text-align:center; padding:40px; color:#666; font-style:italic;">
@@ -194,7 +189,9 @@ function calculatePass(p, isGhost) {
     let stableFuelDemand = 0;
     let stableFertDemand = 0;
     let stableByproducts = {};
+
     let recyclingMap = {}; // Stores precise recycling decisions: "path" -> amount
+    let currentPassStock = {}; // The fixed inventory available for this pass (Start of Tick)
 
     let isAbsorbedFuel = (p.selfFeed && p.targetItem === p.selectedFuel);
     let isAbsorbedFert = (p.selfFert && p.targetItem === p.selectedFert);
@@ -212,7 +209,9 @@ function calculatePass(p, isGhost) {
         stableByproducts = { ...baseSnapshot };
 
         // 2. Stabilization Loop
-        if (p.selfFeed || p.selfFert) {
+        // Trigger if we have Self-Loops OR Active Recycling (to resolve order-of-ops)
+        const hasRecycling = Object.keys(activeRecyclers).length > 0;
+        if (p.selfFeed || p.selfFert || hasRecycling) {
             // FIX: Initialize lastPassGenerated with the base run's output
             // This represents the "Start of Tick" inventory for the first iteration
             let lastPassGenerated = { ...baseSnapshot };
@@ -220,8 +219,11 @@ function calculatePass(p, isGhost) {
             // We do NOT need seedByproducts anymore because we re-simulate everything in the loop
 
             for (let i = 0; i < 10; i++) {
-                // Setup Environment: The available stock is exactly what was produced in the last pass
-                globalByproducts = { ...lastPassGenerated };
+                // Setup Environment: 
+                // Stock = What was produced last pass.
+                // Accumulator = Starts at 0 for this pass.
+                currentPassStock = { ...lastPassGenerated };
+                globalByproducts = {};
 
                 trackGeneration = true;
                 iterationGenerated = {};
@@ -263,6 +265,8 @@ function calculatePass(p, isGhost) {
             }
 
             // Capture Final State (One last measurement pass at stable rate, MIRRORING SIMULATION LOGIC)
+            // CRITICAL FIX: Stock is stable, Accumulator is new.
+            currentPassStock = { ...lastPassGenerated };
             globalByproducts = {};
 
             // Re-run the exact simulation step to capture the final stable state
@@ -334,12 +338,16 @@ function calculatePass(p, isGhost) {
 
         // VISIBILITY LOGIC:
         if (effectiveGhost) {
-            // SIMULATION PHASE: Determine what can be recycled based on available byproducts
-            let availableStock = globalByproducts[item] || 0;
+            // SIMULATION PHASE: Determine what can be recycled based on available byproducts STOCK
+            let availableStock = currentPassStock[item] || 0;
 
             if (activeRecyclers[item] && availableStock > 0.01) {
                 deduction = Math.min(rate, availableStock);
-                globalByproducts[item] -= deduction;
+
+                // Deduct from Stock (Limit) AND Accumulator (Display/Net)
+                currentPassStock[item] -= deduction;
+                globalByproducts[item] = (globalByproducts[item] || 0) - deduction;
+
             } else if (availableStock > 0.01) {
                 // Check if we should auto-enable? (Legacy logic kept separate)
                 canRecycle = true;
