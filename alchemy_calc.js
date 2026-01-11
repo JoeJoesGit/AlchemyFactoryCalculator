@@ -31,7 +31,7 @@ function getProductionHeatCost(item, speedMult, alchemyMult) {
     let cost = 0; const recipe = getActiveRecipe(item);
     if (recipe && recipe.outputs[item]) {
         let batchYield = recipe.outputs[item];
-        if (recipe.machine === "Extractor" || recipe.machine === "Alembic") batchYield *= alchemyMult;
+        if (recipe.machine === "Extractor" || recipe.machine === "Alembic" || recipe.machine === "Advanced Alembic") batchYield *= alchemyMult;
         if (DB.machines[recipe.machine] && DB.machines[recipe.machine].heatCost) {
             const mach = DB.machines[recipe.machine]; const parent = DB.machines[mach.parent];
             const slotsReq = mach.slotsRequired || 1; const pSlots = mach.parentSlots || parent.slots || 3;
@@ -51,7 +51,7 @@ function getProductionFertCost(item, fertVal, fertSpeed, speedMult, alchemyMult)
     const recipe = getActiveRecipe(item);
     if (recipe && recipe.outputs[item]) {
         let batchYield = recipe.outputs[item];
-        if (recipe.machine === "Extractor" || recipe.machine === "Alembic") batchYield *= alchemyMult;
+        if (recipe.machine === "Extractor" || recipe.machine === "Alembic" || recipe.machine === "Advanced Alembic") batchYield *= alchemyMult;
         Object.keys(recipe.inputs).forEach(k => {
             cost += getProductionFertCost(k, fertVal, fertSpeed, speedMult, alchemyMult) * (recipe.inputs[k] / batchYield);
         });
@@ -479,7 +479,7 @@ function calculatePass(p, isGhost) {
             } else {
                 hasChildren = true;
                 let batchYield = recipe.outputs[item] || 1;
-                if (recipe.machine === "Extractor" || recipe.machine === "Alembic") batchYield *= p.alchemyMult;
+                if (recipe.machine === "Extractor" || recipe.machine === "Alembic" || recipe.machine === "Advanced Alembic") batchYield *= p.alchemyMult;
 
                 // --- NURSERY / FERTILITY LOGIC INJECTION ---
                 // If it is a friendly Nursery recipe, we override the time-based calculation with Nutrient-based calculation.
