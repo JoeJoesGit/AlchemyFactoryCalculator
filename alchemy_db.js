@@ -178,6 +178,7 @@ window.ALCHEMY_DB = {
     "machines": {
         "Table Saw": { "tier": 1, "heatCost": 0, "buildCost": { "Plank": 5 } },
         "Stone Crusher": { "tier": 2, "heatCost": 0, "buildCost": { "Plank": 6, "Large Wooden Gear": 6 } },
+        "Seed Plot": { "tier": 0, "heatCost": 0, "buildCost": {} },
         "Nursery": { "tier": 2, "heatCost": 0, "buildCost": { "Stone": 8 } },
         "Grinder": { "tier": 1, "heatCost": 0, "buildCost": { "Plank": 8 } },
         "Extractor": { "tier": 4, "heatCost": 0, "buildCost": { "Iron Ingot": 5, "Glass": 5 } },
@@ -212,12 +213,21 @@ window.ALCHEMY_DB = {
 
     "recipes": [
         // --- HERBS & SEEDS ---
-        { "id": "Flax", "machine": "Nursery", "inputs": { "Flax Seed": 1 }, "outputs": { "Flax": 200 }, "baseTime": 400.0 },
-        { "id": "Sage", "machine": "Nursery", "inputs": { "Sage Seed": 1 }, "outputs": { "Sage": 180 }, "baseTime": 540.0 },
-        { "id": "Redcurrant", "machine": "Nursery", "inputs": { "Red Currant Seed": 1 }, "outputs": { "Redcurrant": 150 }, "baseTime": 900.0 },
-        { "id": "Lavender", "machine": "Nursery", "inputs": { "Lavender Seed": 1 }, "outputs": { "Lavender": 120 }, "baseTime": 1440.0 },
-        { "id": "Chamomile", "machine": "Nursery", "inputs": { "Chamomile Seed": 1 }, "outputs": { "Chamomile": 140 }, "baseTime": 1120.0 },
-        { "id": "Gentian", "machine": "Nursery", "inputs": { "Gentian Seed": 1 }, "outputs": { "Gentian": 80, "Gentian Nectar": 80 }, "baseTime": 2160.0 },
+        // --- NEW NURSERY RECIPES (Nutrient Physics) [DEFAULT] ---
+        { "id": "Flax", "machine": "Nursery", "inputs": {}, "seed": "Flax Seed", "outputs": { "Flax": 1 } },
+        { "id": "Sage", "machine": "Nursery", "inputs": {}, "seed": "Sage Seed", "outputs": { "Sage": 1 } },
+        { "id": "Redcurrant", "machine": "Nursery", "inputs": {}, "seed": "Red Currant Seed", "outputs": { "Redcurrant": 1 } },
+        { "id": "Lavender", "machine": "Nursery", "inputs": {}, "seed": "Lavender Seed", "outputs": { "Lavender": 1 } },
+        { "id": "Chamomile", "machine": "Nursery", "inputs": {}, "seed": "Chamomile Seed", "outputs": { "Chamomile": 1 } },
+        { "id": "Gentian", "machine": "Nursery", "inputs": {}, "seed": "Gentian Seed", "outputs": { "Gentian": 1, "Gentian Nectar": 1 } },
+
+        // --- OLD NURSERY (SEED PLOT) VARIANTS [ALTERNATE] ---
+        { "id": "Flax_SeedPlot", "machine": "Seed Plot", "inputs": { "Flax Seed": 1 }, "outputs": { "Flax": 200 }, "baseTime": 400.0 },
+        { "id": "Sage_SeedPlot", "machine": "Seed Plot", "inputs": { "Sage Seed": 1 }, "outputs": { "Sage": 180 }, "baseTime": 540.0 },
+        { "id": "Redcurrant_SeedPlot", "machine": "Seed Plot", "inputs": { "Red Currant Seed": 1 }, "outputs": { "Redcurrant": 150 }, "baseTime": 900.0 },
+        { "id": "Lavender_SeedPlot", "machine": "Seed Plot", "inputs": { "Lavender Seed": 1 }, "outputs": { "Lavender": 120 }, "baseTime": 1440.0 },
+        { "id": "Chamomile_SeedPlot", "machine": "Seed Plot", "inputs": { "Chamomile Seed": 1 }, "outputs": { "Chamomile": 140 }, "baseTime": 1120.0 },
+        { "id": "Gentian_SeedPlot", "machine": "Seed Plot", "inputs": { "Gentian Seed": 1 }, "outputs": { "Gentian": 80, "Gentian Nectar": 80 }, "baseTime": 2160.0 },
 
         // --- BASICS ---
         { "id": "Plank", "machine": "Table Saw", "inputs": { "Logs": 1 }, "outputs": { "Plank": 200 }, "baseTime": 400.0 },

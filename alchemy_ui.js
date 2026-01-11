@@ -1108,7 +1108,7 @@ function highlightNodes(selector) {
     targets.forEach(el => el.classList.add('highlight-node'));
 }
 
-function updateConstructionList(machineStats, furnaceSlotDemand, totalFurnaces = 0) {
+function updateConstructionList(machineStats, furnaceSlotDemand, activeSeedDemand = {}) {
     const buildList = document.getElementById('construction-list'); buildList.innerHTML = '';
     const totalMatsContainer = document.getElementById('total-mats-container'); totalMatsContainer.innerHTML = '';
     const sortedMachines = Object.keys(machineStats).sort();
@@ -1226,6 +1226,37 @@ function updateConstructionList(machineStats, furnaceSlotDemand, totalFurnaces =
             buildList.appendChild(li);
         }
     });
+
+    // --- SEED HANDLING ---
+    const seedKeys = Object.keys(activeSeedDemand).sort();
+    if (seedKeys.length > 0) {
+        let totalSeeds = 0;
+        let seedListHtml = `<ul class="build-sublist">`;
+
+        seedKeys.forEach(seedName => {
+            const count = activeSeedDemand[seedName];
+            totalSeeds += count;
+
+            // Add to Global Material Total
+            if (!totalConstructionMaterials[seedName]) totalConstructionMaterials[seedName] = 0;
+            totalConstructionMaterials[seedName] += count;
+
+            // Hover: Highlight Nurseries that use this seed?
+            // "Sage Seed" uses "Sage" recipe? Or just highlight logic is hard to map back without linkage.
+            // For now, no specific highlight or highlight all Nurseries.
+            const rowHover = `onmouseover="highlightNodes('[data-machine=\\'Nursery\\']')" onmouseout="highlightNodes(null)"`;
+
+            seedListHtml += `<li class="build-subitem" ${rowHover}><span>${seedName}</span> <span class="build-val">${count}</span></li>`;
+        });
+        seedListHtml += `</ul>`;
+
+        const li = document.createElement('li'); li.className = 'build-group';
+        // Header Highlight: Highlight all Nurseries
+        const headerHover = `onmouseover="highlightNodes('[data-machine=\\'Nursery\\']')" onmouseout="highlightNodes(null)"`;
+
+        li.innerHTML = `<div class="build-header" style="border-top:1px dashed #555" onclick="toggleBuildGroup(this.parentNode)" ${headerHover}><span><span class="build-arrow">▶</span> Required Seeds</span> <span class="build-count" style="color:var(--bio)">${totalSeeds}</span></div>${seedListHtml}`;
+        buildList.appendChild(li);
+    }
 
     if (Object.keys(totalConstructionMaterials).length > 0) {
         let totalHtml = `<div class="total-mats-header">Total Materials Required (Minimum)</div>`;

@@ -8,6 +8,7 @@ window.globalByproducts = {};
 window.activeRecyclers = {}; // { "ItemName": true }
 window.externalOverrides = {}; // { "pathKey": true }
 window.globalUserExternalInputs = {}; // { "ItemName": totalRate }
+window.activeSeedDemand = {}; // { "ItemName": count }
 window.lastTargetItem = "";
 window.suppressReset = false; // Flag to prevent wiping settings during Import
 
@@ -96,6 +97,7 @@ function calculate() {
 
         // Clear aggregation for this run
         globalUserExternalInputs = {};
+        activeSeedDemand = {};
 
         // Settings
         const selectedFuel = document.getElementById('fuelSelect').value; const selfFeed = document.getElementById('selfFeed').checked;
@@ -482,16 +484,26 @@ function calculatePass(p, isGhost) {
                 if (recipe.machine === "Extractor" || recipe.machine === "Alembic" || recipe.machine === "Advanced Alembic") batchYield *= p.alchemyMult;
 
                 // --- NURSERY / FERTILITY LOGIC INJECTION ---
-                // If it is a friendly Nursery recipe, we override the time-based calculation with Nutrient-based calculation.
                 let effectiveBaseTime = recipe.baseTime;
-                if (recipe.machine === "Nursery" && itemDef.nutrientCost) {
+
+                if (recipe.machine === "Nursery") {
+                    // NEW: Dynamic Cycle Time based on Total Batch Cost
                     const fertilitySpeed = (fertDef.maxFertility || 12);
-                    // Time per item = Cost / Speed. 
-                    // e.g. Cost 24 / Speed 12 = 2s per item.
-                    // Standard BaseTime for Flax is 400s?? 
-                    // Wait, the DB baseTime for herbs is weirdly high (400, 540). 
-                    // The logic REPLACES baseTime with this calculated time.
-                    effectiveBaseTime = itemDef.nutrientCost / fertilitySpeed;
+                    let totalBatchCost = 0;
+
+                    // Sum up nutrient costs for ALL outputs (handling Multi-Output Gentian)
+                    Object.keys(recipe.outputs).forEach(outKey => {
+                        const outQty = recipe.outputs[outKey];
+                        const outDef = DB.items[outKey];
+                        if (outDef && outDef.nutrientCost) {
+                            totalBatchCost += outQty * outDef.nutrientCost;
+                        }
+                    });
+
+                    // Time = Total Cost / Speed
+                    if (totalBatchCost > 0) {
+                        effectiveBaseTime = totalBatchCost / fertilitySpeed;
+                    }
                 }
 
                 const batchesPerMin = netRate / batchYield;
@@ -551,6 +563,12 @@ function calculatePass(p, isGhost) {
 
                 if (!effectiveGhost) {
                     addMachineCount(recipe.machine, item, Math.ceil(machinesNeeded - 0.0001), machinesNeeded);
+
+                    // SEED ACCUMULATION (Construction Cost)
+                    if (recipe.machine === "Nursery" && recipe.seed) {
+                        if (!activeSeedDemand[recipe.seed]) activeSeedDemand[recipe.seed] = 0;
+                        activeSeedDemand[recipe.seed] += Math.ceil(machinesNeeded - 0.0001);
+                    }
                 }
 
                 // HEAT CALCULATION
@@ -585,7 +603,13 @@ function calculatePass(p, isGhost) {
                     let outputsStr = Object.keys(recipe.outputs).map(k => `${recipe.outputs[k]} ${k}`).join(', ');
                     let cycleTime = recipe.baseTime / p.speedMult;
                     let throughput = effectiveBatchesPerMin * batchYield;
-                    let tooltipText = `Recipe: ${inputsStr} -> ${outputsStr}\nBase Time: ${recipe.baseTime}s\nSpeed Mult: ${p.speedMult.toFixed(2)}x\nCycle Time: ${cycleTime.toFixed(2)}s\nThroughput: ${throughput.toFixed(2)} items/min per machine`;
+
+                    let alchemyLine = "";
+                    if (recipe.machine === "Extractor" || recipe.machine === "Alembic" || recipe.machine === "Advanced Alembic") {
+                        alchemyLine = `\nAlchemy Mult: ${p.alchemyMult.toFixed(2)}x`;
+                    }
+
+                    let tooltipText = `Recipe: ${inputsStr} -> ${outputsStr}\nBase Time: ${recipe.baseTime}s\nSpeed Mult: ${p.speedMult.toFixed(2)}x\nCycle Time: ${cycleTime.toFixed(2)}s${alchemyLine}\nThroughput: ${throughput.toFixed(2)} items/min per machine`;
 
                     /* capTag declared above */
                     if (p.showMax) {
@@ -856,7 +880,7 @@ function calculatePass(p, isGhost) {
         });
 
         // PASS RAW OBJECTS NOW using the new signature
-        updateConstructionList(machineStats, furnaceSlotDemand);
+        updateConstructionList(machineStats, furnaceSlotDemand, activeSeedDemand);
 
         updateSummaryBox(p, globalHeatLoad, globalBioLoad, globalCostPerMin, primaryRenderRate, globalFuelDemandItems, globalFertDemandItems);
     }
