@@ -4,7 +4,7 @@
    ========================================================================== */
 
 let DB = null;
-const APP_VERSION = "v100"; // UI Version
+const APP_VERSION = "v101"; // UI Version
 const OLD_STORAGE_KEY = "alchemy_factory_save_v1"; // Deprecated key
 const SETTINGS_KEY = "alchemy_settings_v1";        // User Prefs (Belt level, etc)
 const CUSTOM_DB_KEY = "alchemy_custom_db_v1";      // Custom Recipe Data
@@ -112,7 +112,19 @@ function init() {
 
     // 4. UI INITIALIZATION
     // 4. UI INITIALIZATION
-    const urlParams = new URLSearchParams(window.location.search);
+    // Decode HTML entities in URL (fixes issues like &amp; from external sites)
+    const rawSearch = window.location.search;
+    const decodeHTML = (str) => {
+        try {
+            const doc = new DOMParser().parseFromString(str, "text/html");
+            return doc.documentElement.textContent;
+        } catch (e) {
+            console.warn("URL Parsing Error", e);
+            return str;
+        }
+    };
+    const cleanSearch = decodeHTML(rawSearch);
+    const urlParams = new URLSearchParams(cleanSearch);
 
     prepareComboboxData();
     populateSelects();
@@ -126,74 +138,83 @@ function init() {
         return key ? urlParams.get(key) : null;
     };
 
-    // 5. URL PARAMETER HANDLING (Case-Insensitive)
-    const urlUpgrades = getParam('setupgrades');
-    const urlHeat = getParam('heat');
-    const urlFert = getParam('fert');
-    const urlItem = getParam('item');
-    const urlRate = getParam('rate');
-    const urlLoad = getParam('load');
+    // 5. URL PARAMETER HANDLING
+    const urlCode = getParam('code');
 
-    if (urlUpgrades) {
-        const parts = urlUpgrades.split(',');
-        // Map: [0]Belt, [2]Speed, [3]Alchemy, [4]Fuel, [5]Fert
-        if (parts[0]) document.getElementById('lvlBelt').value = parseInt(parts[0]) || 0;
-        if (parts[2]) document.getElementById('lvlSpeed').value = parseInt(parts[2]) || 0;
-        if (parts[3]) document.getElementById('lvlAlchemy').value = parseInt(parts[3]) || 0;
-        if (parts[4]) document.getElementById('lvlFuel').value = parseInt(parts[4]) || 0;
-        if (parts[5]) document.getElementById('lvlFert').value = parseInt(parts[5]) || 0;
-    }
+    if (urlCode) {
+        // NEW: Load from Code (Supersedes other params)
+        importStateToUI(urlCode);
+    } else {
+        // LEGACY: Individual Params
+        const urlUpgrades = getParam('setupgrades');
+        const urlHeat = getParam('heat');
+        const urlFert = getParam('fert');
+        const urlItem = getParam('item');
+        const urlRate = getParam('rate');
+        const urlLoad = getParam('load');
 
-    if (urlHeat) {
-        const sel = document.getElementById('fuelSelect');
-        const opt = Array.from(sel.options).find(o => o.value.toLowerCase() === urlHeat.toLowerCase());
-        if (opt) sel.value = opt.value;
-    }
-
-    if (urlFert) {
-        const sel = document.getElementById('fertSelect');
-        const opt = Array.from(sel.options).find(o => o.value.toLowerCase() === urlFert.toLowerCase());
-        if (opt) sel.value = opt.value;
-    }
-
-    if (urlItem) {
-        const rawItem = decodeURIComponent(urlItem).trim();
-        let targetName = rawItem;
-
-        // Try to find a valid item in DB.items or Recipes
-        // We reuse allItemsList which is populated by prepareComboboxData() earlier
-        const matchExact = allItemsList.find(i => i.name.toLowerCase() === rawItem.toLowerCase());
-
-        if (matchExact) {
-            targetName = matchExact.name;
-        } else {
-            // Fallback: Starts With
-            const matchStart = allItemsList.find(i => i.name.toLowerCase().startsWith(rawItem.toLowerCase()));
-            if (matchStart) {
-                targetName = matchStart.name;
-            }
+        if (urlUpgrades) {
+            const parts = urlUpgrades.split(',');
+            // Map: [0]Belt, [2]Speed, [3]Alchemy, [4]Fuel, [5]Fert
+            if (parts[0]) document.getElementById('lvlBelt').value = parseInt(parts[0]) || 0;
+            if (parts[2]) document.getElementById('lvlSpeed').value = parseInt(parts[2]) || 0;
+            if (parts[3]) document.getElementById('lvlAlchemy').value = parseInt(parts[3]) || 0;
+            if (parts[4]) document.getElementById('lvlFuel').value = parseInt(parts[4]) || 0;
+            if (parts[5]) document.getElementById('lvlFert').value = parseInt(parts[5]) || 0;
         }
 
-        document.getElementById('targetItemInput').value = targetName;
-        document.getElementById('targetRate').disabled = false;
+        if (urlHeat) {
+            const sel = document.getElementById('fuelSelect');
+            const val = findOption(sel, urlHeat);
+            if (val) sel.value = val;
+            else console.warn(`Legacy URL: Could not find match for heat=${urlHeat}`);
+        }
 
-        if (urlRate) {
-            document.getElementById('targetRate').value = urlRate;
-        } else if (urlLoad) {
-            const loadVal = parseFloat(urlLoad);
-            if (!isNaN(loadVal)) {
-                const lvlBelt = parseInt(document.getElementById('lvlBelt').value) || 0;
-                const speed = getBeltSpeed(lvlBelt);
-                const calcRate = speed * loadVal;
-                document.getElementById('targetRate').value = calcRate.toFixed(2);
+        if (urlFert) {
+            const sel = document.getElementById('fertSelect');
+            const val = findOption(sel, urlFert);
+            if (val) sel.value = val;
+            else console.warn(`Legacy URL: Could not find match for fert=${urlFert}`);
+        }
+
+        if (urlItem) {
+            const rawItem = decodeURIComponent(urlItem).trim();
+            let targetName = rawItem;
+
+            // Try to find a valid item in DB.items or Recipes
+            const matchExact = allItemsList.find(i => i.name.toLowerCase() === rawItem.toLowerCase());
+
+            if (matchExact) {
+                targetName = matchExact.name;
+            } else {
+                // Fallback: Starts With
+                const matchStart = allItemsList.find(i => i.name.toLowerCase().startsWith(rawItem.toLowerCase()));
+                if (matchStart) {
+                    targetName = matchStart.name;
+                }
+            }
+
+            document.getElementById('targetItemInput').value = targetName;
+            document.getElementById('targetRate').disabled = false;
+
+            if (urlRate) {
+                document.getElementById('targetRate').value = urlRate;
+            } else if (urlLoad) {
+                const loadVal = parseFloat(urlLoad);
+                if (!isNaN(loadVal)) {
+                    const lvlBelt = parseInt(document.getElementById('lvlBelt').value) || 0;
+                    const speed = getBeltSpeed(lvlBelt);
+                    const calcRate = speed * loadVal;
+                    document.getElementById('targetRate').value = calcRate.toFixed(2);
+                } else {
+                    updateFromSlider();
+                }
             } else {
                 updateFromSlider();
             }
         } else {
             updateFromSlider();
         }
-    } else {
-        updateFromSlider();
     }
 
     // Default raw editor text
@@ -1238,10 +1259,10 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
         const revenuePerMin = p.targetRate * targetItemDef.sellPrice;
         const profit = revenuePerMin - cost;
         // Use formatCurrency for profit
-        profitHtml = `<div class="stat-block"><span class="stat-label">Projected Profit</span><span class="stat-value" style="font-size:1.5em; margin-top:6px;">${formatCurrency(profit)} /m</span></div>`;
+        profitHtml = `<div class="stat-block"><span class="stat-label">Projected Profit</span><span class="stat-value gold-profit" style="font-size:1.5em; margin-top:6px;">${formatCurrency(profit)} /m</span></div>`;
     } else {
         // Use formatCurrency for cost
-        profitHtml = `<div class="stat-block"><span class="stat-label">Total Raw Cost</span><span class="stat-value" style="font-size:1.5em; margin-top:6px;">${formatCurrency(cost)} /m</span></div>`;
+        profitHtml = `<div class="stat-block"><span class="stat-label">Total Raw Cost</span><span class="stat-value gold-cost" style="font-size:1.5em; margin-top:6px;">${formatCurrency(cost)} /m</span></div>`;
     }
     let deductionText = [];
     if (p.selfFeed && p.targetItem === p.selectedFuel) {
@@ -1254,6 +1275,17 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
         deductionText.push(`Gross: ${gross.toFixed(2)}`);
         deductionText.push(`Use: ${actualFertNeed.toFixed(2)}`);
     }
+
+    // Share Box HTML (Integrated)
+    const shareHtml = `
+        <div class="share-row" style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center; margin-top:10px; padding-top:10px; border-top:1px dashed #444;">
+             <input type="text" id="share-code-display" readonly value="Generating..." onclick="this.select()" class="code-display-input" style="font-size:0.8em; color:#666;" title="Production Chain code for current state of calculator. Can be used to share with others to replicate this production chain precisely">
+             <button class="icon-btn" onclick="copyCodeToClipboard()" title="Copy Production Chain Code to clipboard">📋 Code</button>
+             <button class="icon-btn" onclick="copyLinkToClipboard()" title="Copy a direct link (URL) to the clipboard that included the Production Chain Code">🔗 Link</button>
+             <button class="icon-btn" onclick="openImportModal()" title="Import a Production Chain Code or URL with code to display.">📥 Import</button>
+        </div>
+    `;
+
     document.getElementById('summary-container').innerHTML = `
         <div class="summary-box">
             <div class="stat-block"><span class="stat-label">Net Output</span><span class="stat-value ${p.targetRate >= 0 ? 'net-positive' : 'net-warning'}" style="font-size:1.5em">${formatVal(p.targetRate)} / min</span>${deductionText.length > 0 ? `<span class=\"stat-sub\" style=\"font-size:0.75em\">${deductionText.join('<br>')}</span>` : ''}</div>
@@ -1261,7 +1293,17 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
             <div class="stat-block"><span class="stat-label">External Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: ${formatVal(externalHeat)} P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: ${formatVal(externalBio)} V/s</span></div>
             ${profitHtml}
             <div class="stat-block"><span class="stat-label">Belt Usage (Net)</span><span class="stat-value" style="font-size:1.1em; color:${p.targetRate > p.beltSpeed ? '#ff5252' : '#aaa'};">${(p.targetRate / p.beltSpeed * 100).toFixed(0)}%</span><span class="stat-sub">Cap: ${p.beltSpeed}/m</span></div>
+            ${shareHtml}
         </div>`;
+
+    // Trigger Code Generation Async
+    exportStateFromUI().then(code => {
+        const el = document.getElementById('share-code-display');
+        if (el) {
+            el.value = code;
+            el.style.color = 'var(--info)';
+        }
+    }).catch(err => console.warn("Auto-gen code failed", err));
 }
 function toggleBuildGroup(header) { header.classList.toggle('expanded'); }
 function toggleNode(arrowElement) { const node = arrowElement.closest('.node'); if (node) node.classList.toggle('collapsed'); }
@@ -1341,18 +1383,411 @@ window.onload = function () {
     updateUpgradeSummary();
 };
 
-function restoreStaticSectionStates() {
-    const panels = document.querySelectorAll('.panel');
-    panels.forEach(panel => {
-        const titleEl = panel.querySelector('h3');
-        if (titleEl) {
-            const key = titleEl.innerText.split('(')[0].trim();
-            // Only apply if state exists (undefined means use HTML default)
-            const savedState = window.sectionStates[key];
-            if (typeof savedState !== 'undefined') {
-                if (savedState) panel.classList.add('collapsed');
-                else panel.classList.remove('collapsed');
+/* ==========================================================================
+   SECTION: IMPORT / EXPORT / SERIALIZATION
+   ========================================================================== */
+
+// --- FUZZY OPTION MATCHER (Fixes URL bugs) ---
+function findOption(selectElement, val) {
+    if (!val) return null;
+    const clean = v => v.toLowerCase().trim();
+    const search = clean(val);
+
+    // 1. Precise Match
+    for (let opt of selectElement.options) {
+        if (clean(opt.value) === search) return opt.value;
+    }
+
+    // 2. Space/Plus/Underscore Swap Match
+    // e.g. "Charcoal Powder" vs "Charcoal+Powder"
+    const normalize = s => s.replace(/[\+\_\-]/g, ' ');
+    const searchNorm = normalize(search);
+
+    for (let opt of selectElement.options) {
+        if (normalize(clean(opt.value)) === searchNorm) return opt.value;
+    }
+
+    return null;
+}
+
+// --- STATE GATHERING (Optimized) ---
+function exportStateFromUI() {
+    const k = CODE_KEYS; // Alias for brevity
+
+    // 1. Gather State in Compact Form
+    const s = {};
+    s[k.v] = 1;
+
+    // A. Target
+    const tItem = document.getElementById('targetItemInput').value;
+    const tRate = document.getElementById('targetRate').value;
+
+    s[k.target] = {};
+    // Use ID if available, else name
+    if (DB.items[tItem]) {
+        s[k.target][k.item] = DB.items[tItem].id;
+    } else {
+        s[k.target][k.item] = tItem;
+    }
+    s[k.target][k.rate] = parseFloat(tRate) || 0;
+
+    // B. Settings
+    s[k.settings] = {};
+    const set = s[k.settings];
+
+    // Fuel/Fert (Convert to ID if possible)
+    const fuelVal = document.getElementById('fuelSelect').value;
+    set[k.fuel] = (DB.items[fuelVal]) ? DB.items[fuelVal].id : fuelVal;
+
+    const fertVal = document.getElementById('fertSelect').value;
+    set[k.fert] = (DB.items[fertVal]) ? DB.items[fertVal].id : fertVal; // 'e'
+
+    // Booleans -> 1/0
+    set[k.selfFeed] = document.getElementById('selfFeed').checked ? 1 : 0;
+    set[k.selfFert] = document.getElementById('selfFert').checked ? 1 : 0;
+    set[k.showMax] = document.getElementById('showMaxCap').checked ? 1 : 0;
+
+    // C. Upgrades (Array)
+    s[k.upgrades] = [
+        parseInt(document.getElementById('lvlBelt').value) || 0,
+        parseInt(document.getElementById('lvlSpeed').value) || 0,
+        parseInt(document.getElementById('lvlAlchemy').value) || 0,
+        parseInt(document.getElementById('lvlFuel').value) || 0,
+        parseInt(document.getElementById('lvlFert').value) || 0
+    ];
+
+    // D. Lists
+    s[k.lists] = {};
+    const lst = s[k.lists];
+
+    // Preferred: { ItemName: RecipeID } -> { ItemID: RecipeID }
+    const prefRaw = DB.settings.preferredRecipes || {};
+    lst[k.preferred] = {};
+    for (let key in prefRaw) {
+        const itemID = DB.items[key] ? DB.items[key].id : key;
+        lst[k.preferred][itemID] = prefRaw[key];
+    }
+
+    // Recyclers: [ItemName] -> [ItemID]
+    const recRaw = Object.keys(activeRecyclers || {});
+    lst[k.recyclers] = recRaw.map(name => (DB.items[name] ? DB.items[name].id : name));
+
+    // Externals: [Path] -> [PackedPath] ("ItemA|ItemB" -> "12|34")
+    const extRaw = Object.keys(externalOverrides || {});
+    lst[k.externals] = extRaw.map(path => {
+        return path.split('|').map(seg => {
+            // Check if segment is a known item
+            return (DB.items[seg] ? DB.items[seg].id : seg);
+        }).join('|');
+    });
+
+    // 2. Stringify & Compress
+    const jsonStr = JSON.stringify(s); // Standard stringify (removes whitespace)
+    return compressData(jsonStr);
+}
+
+// --- COMPRESSION HELPERS (Async) ---
+async function compressData(str) {
+    const stream = new Blob([str]).stream().pipeThrough(new CompressionStream("gzip"));
+    const response = await new Response(stream);
+    const blob = await response.blob();
+    const buffer = await blob.arrayBuffer();
+    // Convert to Base64
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    const b64 = window.btoa(binary);
+    // URL-Safe Base64: + -> -, / -> _, = -> . (or just keep = but encode it? usually strip or keep)
+    // We will just swap chars to make it URL path safe without encoding
+    return b64.replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+async function decompressData(safeB64) {
+    // Reverse URL-Safe: - -> +, _ -> /
+    const b64 = safeB64.replace(/-/g, '+').replace(/_/g, '/');
+    try {
+        const binary = window.atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+        const response = await new Response(stream);
+        return await response.text();
+    } catch (e) {
+        console.error("Decompression Failed", e);
+        throw e;
+    }
+}
+
+
+// --- IMPORT LOGIC ---
+async function importStateToUI(inputStr) {
+    if (!inputStr) return;
+
+    // 1. Sanitize Input
+    let code = inputStr.trim();
+    // Helper to extract code param from URL
+    try {
+        if (code.includes("code=")) {
+            // It could be a full URL
+            if (code.startsWith("http") || code.includes("?")) {
+                const urlObj = new URL(code, window.location.origin); // safe relative parsing
+                const p = new URLSearchParams(urlObj.search);
+                if (p.has('code')) code = p.get('code');
+            } else {
+                // Just a query string?
+                const p = new URLSearchParams(code);
+                if (p.has('code')) code = p.get('code');
             }
         }
-    });
+    } catch (e) {
+        // Fallback: If URL parsing fails, assume it's just the code string if it looks like one
+        console.warn("URL Parsing failed, attempting raw string usage", e);
+    }
+
+    // 2. Decompress
+    let state = null;
+    try {
+        const jsonStr = await decompressData(code);
+        state = JSON.parse(jsonStr);
+    } catch (e) {
+        alert("The provided Production Chain Code is invalid or corrupted. Loading default session.");
+        console.error("Import Error", e);
+        return; // Stop processing
+    }
+
+    if (!state || typeof state !== 'object') {
+        alert("Invalid Code Structure.");
+        return;
+    }
+
+    // --- NORMALIZATION (Compact -> Verbose) ---
+    // If we detect aliased keys, we expand them to the standard format
+    // so the rest of the logic works unchanged.
+    const k = CODE_KEYS;
+    const reg = ITEM_REGISTRY;
+
+    // Helper: Resolve Item (ID or Name) -> Name
+    const resolve = (val) => {
+        if (typeof val === 'number') {
+            return reg[val - 1] || "Unknown"; // IDs are 1-based, Registry is 0-based
+        }
+        return val; // Already a string
+    };
+
+    if (state[k.target] || state[k.settings]) {
+        console.log("Detected Compact Code Format. Normalizing...");
+
+        // Target
+        if (state[k.target]) {
+            state.target = {
+                item: resolve(state[k.target][k.item]),
+                rate: state[k.target][k.rate]
+            };
+        }
+
+        // Settings
+        if (state[k.settings]) {
+            const s = state[k.settings];
+            state.settings = {
+                fuel: resolve(s[k.fuel]),
+                fert: resolve(s[k.fert]),
+                selfFeed: !!s[k.selfFeed], // 1 -> true
+                selfFert: !!s[k.selfFert],
+                showMax: !!s[k.showMax]
+            };
+        }
+
+        // Upgrades
+        if (state[k.upgrades]) {
+            state.upgrades = state[k.upgrades];
+        }
+
+        // Lists
+        if (state[k.lists]) {
+            const l = state[k.lists];
+            state.lists = {};
+
+            // Preferred: { ID: Recipe } -> { Name: Recipe }
+            if (l[k.preferred]) {
+                state.lists.preferred = {};
+                for (let key in l[k.preferred]) {
+                    state.lists.preferred[resolve(parseInt(key) || key)] = l[k.preferred][key];
+                }
+            }
+
+            // Recyclers: [ID] -> [Name]
+            if (l[k.recyclers]) {
+                state.lists.recyclers = l[k.recyclers].map(resolve);
+            }
+
+            // Externals: [PackedPath] -> [Path]
+            if (l[k.externals]) {
+                state.lists.externals = l[k.externals].map(packed => {
+                    if (typeof packed !== 'string') return resolve(packed);
+                    return packed.split('|').map(seg => {
+                        // seg might be "75" (ID) or "Something" (Name)
+                        const id = parseInt(seg);
+                        if (!isNaN(id) && reg[id - 1]) return reg[id - 1];
+                        return seg;
+                    }).join('|');
+                });
+            }
+        }
+    }
+
+    console.log("Importing State:", state);
+
+    // 3. SAFE IMPORT SEQUENCE
+    // Step A: Suppress Reset
+    window.suppressReset = true;
+
+    try {
+        // Step B: Apply Settings
+        if (state.upgrades) {
+            const u = state.upgrades;
+            document.getElementById('lvlBelt').value = u[0] || 0;
+            document.getElementById('lvlSpeed').value = u[1] || 0;
+            document.getElementById('lvlAlchemy').value = u[2] || 0;
+            document.getElementById('lvlFuel').value = u[3] || 0;
+            document.getElementById('lvlFert').value = u[4] || 0;
+        }
+
+        if (state.settings) {
+            const s = state.settings;
+            // Fuzzy Find Selections
+            const fSel = document.getElementById('fuelSelect');
+            const matchFuel = findOption(fSel, s.fuel);
+            if (matchFuel) fSel.value = matchFuel;
+            else if (s.fuel) console.warn("Import: Could not find fuel", s.fuel);
+
+            const fertSel = document.getElementById('fertSelect');
+            const matchFert = findOption(fertSel, s.fert);
+            if (matchFert) fertSel.value = matchFert;
+
+            // Toggles
+            document.getElementById('selfFeed').checked = !!s.selfFeed;
+            document.getElementById('selfFert').checked = !!s.selfFert;
+            document.getElementById('showMaxCap').checked = !!s.showMax;
+
+            // Update Toggle Button UI (Trigger the visual update functions manually or mimic specific parts)
+            // Existing functions: toggleFuel(), toggleFert() toggle logic. 
+            // We need to set state directly, so we just update the buttons' classes.
+            updateToggleButtonUI('btnSelfFuel', s.selfFeed, "Self-Fuel");
+            updateToggleButtonUI('btnSelfFert', s.selfFert, "Self-Fert");
+        }
+
+        // Step C: Apply Preferred Recipes
+        if (state.lists && state.lists.preferred) {
+            DB.settings.preferredRecipes = { ...state.lists.preferred };
+        }
+
+        // Step D: Target Item
+        // We set this to get the base tree, but we suppress the reset so it doesn't wipe defaults
+        if (state.target && state.target.item) {
+            const tItem = state.target.item;
+            const match = allItemsList.find(i => i.name.toLowerCase() === tItem.toLowerCase());
+            if (match) {
+                document.getElementById('targetItemInput').value = match.name;
+                document.getElementById('targetRate').value = state.target.rate || 60;
+                document.getElementById('targetRate').disabled = false;
+
+                // If the target changed, calculate() would normally fire and reset lists.
+                // safe-guard: manually update lastTargetItem so calculate() thinks nothing changed?
+                // No, we use window.suppressReset which we already set to true.
+            }
+        }
+
+        // Step E: Recyclers
+        // Clear global first, then populate
+        activeRecyclers = {};
+        if (state.lists && state.lists.recyclers) {
+            state.lists.recyclers.forEach(r => activeRecyclers[r] = true);
+        }
+
+        // Step F: Externals
+        externalOverrides = {};
+        if (state.lists && state.lists.externals) {
+            state.lists.externals.forEach(e => externalOverrides[e] = true);
+        }
+
+    } catch (e) {
+        console.error("Error applying state:", e);
+        alert("An error occurred while applying the code. Some settings may be partial.");
+    } finally {
+        // Step G: Release Reset Block
+        // We keep it suppressed for the FINAL calculation to avoid the logic inside calculate() 
+        // from thinking "Hey, the input value is different from lastTargetItem, better reset!"
+        // Actually, calculate() reads the DOM. If we updated the DOM, calculate() sees the new value.
+        // If lastTargetItem !== new value, it resets.
+        // So we MUST update `lastTargetItem` manually to match the new DOM value *before* unsuppressing.
+
+        // Update the tracker so the next calculate doesn't trigger a reset
+        if (typeof window.lastTargetItem !== 'undefined') {
+            window.lastTargetItem = document.getElementById('targetItemInput').value;
+        }
+
+        window.suppressReset = false;
+    }
+
+    // Step H: Final Calc
+    calculate();
+}
+
+function updateToggleButtonUI(btnId, isChecked, labelPrefix) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    if (isChecked) {
+        btn.innerText = `${labelPrefix}: ON`;
+        btn.classList.remove('btn-inactive-red');
+        btn.classList.add('btn-active-green');
+    } else {
+        btn.innerText = `${labelPrefix}: OFF`;
+        btn.classList.remove('btn-active-green');
+        btn.classList.add('btn-inactive-red');
+    }
+}
+
+// --- UI EVENT HANDLERS ---
+function openImportModal() {
+    document.getElementById('import-modal').style.display = 'flex';
+    document.getElementById('import-code-input').value = "";
+    document.getElementById('import-code-input').focus();
+}
+
+async function handleImportSubmit() {
+    const code = document.getElementById('import-code-input').value;
+    if (!code) return;
+    closeModal('import-modal');
+    await importStateToUI(code);
+}
+
+async function copyCodeToClipboard() {
+    // Code is already in the input box, just copy it
+    const display = document.getElementById('share-code-display');
+    if (!display || display.value === "Generating...") {
+        // Fallback or force gen
+        const code = await exportStateFromUI();
+        await navigator.clipboard.writeText(code);
+    } else {
+        await navigator.clipboard.writeText(display.value);
+    }
+    alert("Code copied!");
+}
+
+async function copyLinkToClipboard() {
+    // Generate fresh to be safe
+    try {
+        const code = await exportStateFromUI();
+        const url = `${window.location.origin}${window.location.pathname}?code=${encodeURIComponent(code)}`;
+        await navigator.clipboard.writeText(url);
+        alert("Link copied!");
+    } catch (e) {
+        console.error(e);
+        alert("Failed to generate link.");
+    }
 }

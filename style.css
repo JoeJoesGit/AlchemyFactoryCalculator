@@ -2037,6 +2037,68 @@ button.reset-btn:hover {
 /* Fine-tune the root node position */
 .section-primary-chain .node[data-depth="0"] {
     margin-left: 0;
-    border-left-width: 4px;
     /* Make the purple line visible/distinct */
+    border-left-width: 4px;
+}
+
+/* ==========================================================================
+   SECTION: CSS - SHARE / IMPORT
+   ========================================================================== */
+.share-box {
+    background: #252525;
+    border-left: 4px solid var(--info);
+    padding: 12px;
+    margin-bottom: 20px;
+}
+
+.code-display-input {
+    flex: 1;
+    background: #111;
+    border: 1px solid #444;
+    color: var(--info);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9em;
+    cursor: copy;
+}
+
+.code-display-input:focus {
+    outline: none;
+    border-color: var(--info);
+}
+
+.icon-btn {
+    background: #333;
+    border: 1px solid #444;
+    color: #ccc;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+.icon-btn:hover {
+    background: #444;
+    color: white;
+    border-color: #666;
+}
+
+.full-width-btn {
+    width: 100%;
+    background: #333;
+    border: 1px dashed #555;
+    color: var(--accent);
+    padding: 8px;
+    margin-top: 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    text-align: center;
+}
+
+.full-width-btn:hover {
+    background: #383838;
+    border-color: var(--accent);
 }
