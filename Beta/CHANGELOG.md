@@ -1,5 +1,25 @@
 # Alchemy Factory Calculator Change Log
 
+## v101 - Robust Sharing & Optimization (2026-01-10)
+* **Feature:** **Robust Sharing Links.**
+    * **UI:** Added code generation to the Production Tree that allows users to generate a shareable link for their current build, with a more compact code that contains more data than using the verbose format.
+    * **URL-Safe Encoding:** Production chain codes now use URL-safe characters (`-`, `_`) to eliminate link corruption issues common on Reddit and Discord.
+    * **Resilient Parsing:** The calculator now automatically cleans up HTML-encoded entities (like `&amp;`) when pasting links from formatted web pages, ensuring your shared builds load correctly every time.
+* **Optimization:** **Extreme Code Compression.**
+    * **ID-Based Format:** Replaced verbose text strings with a highly efficient numerical ID system.
+    * **Result:** Share codes are now **~70% shorter** (e.g., reducing a 500-char link to ~150 chars), making them much cleaner to paste and share.
+    * **Aliasing:** Internal data keys are now packed into single letters (`target` -> `t`) to further save space.
+    * **Compatibility:** Fully backward compatible. The calculator can still import older "verbose" codes from previous versions.
+    * **Database:** The database has been updated to support the new ID-based format of the codes.
+* **Refinement:** **External Logic Cleanup.**
+    * **Cascading Toggles:** Toggling a parent row to "External" now automatically clears any overrides on its children. This prevents "phantom" inputs and ensures the generated code only tracks the top-level external source.
+    * **Ghost Byproducts:** Fixed an issue where byproducts from an externalized sub-chain would still persist in the Recycle list. These are now correctly zeroed out.
+* **Dev Tools:** **Debug Tool 2.0.**
+    * The `debug_code.html` tool has been upgraded to support the new ID-based format. it now features a **Split-Screen View** comparing the Raw Compact JSON vs the Translated Verbose JSON for easy verification.
+* **UI:** **Share Box Tooltips.**
+    * Added helpful hover text to the `Copy Code`, `Link`, and `Import` buttons to explain exactly what they do.
+
+
 ## v100 - Layout Perfection & Deep Logic (2026-01-07)
 * **Feature:** **External Input Toggles.**
     * Added `[Ext]` buttons to every specific item row in the Production Tree.

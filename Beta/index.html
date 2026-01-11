@@ -57,6 +57,28 @@
             </div>
         </div>
 
+        <!-- Import Code Modal -->
+        <div id="import-modal" class="modal-overlay">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2>Import Production Chain</h2>
+                    <button class="close-modal" onclick="closeModal('import-modal')">&times;</button>
+                </div>
+                <div style="padding: 15px;">
+                    <p style="margin-bottom: 10px; color: #ccc;">Paste your code or URL below:</p>
+                    <textarea id="import-code-input" rows="5"
+                        style="width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 10px; border-radius: 4px; resize: vertical; margin-bottom: 15px; font-family: monospace;"></textarea>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button onclick="closeModal('import-modal')"
+                            style="padding: 8px 16px; background: transparent; border: 1px solid #666; color: #ccc; border-radius: 4px; cursor: pointer;">Cancel</button>
+                        <button onclick="handleImportSubmit()"
+                            style="padding: 8px 16px; background: #2e7d32; border: none; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">Load
+                            Code</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- View: Calculator -->
         <div id="view-calc" class="view active">
             <div class="app-grid">

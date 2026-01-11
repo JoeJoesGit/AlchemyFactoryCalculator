@@ -10,24 +10,24 @@ const BELT_FRACTIONS = [
     { n: 1, d: 16, label: "1/16" },    // 0.0625
     { n: 1, d: 12, label: null },      // ~0.083
     { n: 1, d: 10, label: null },      // 0.1
-    
+
     // Mid range (Standard factory ratios)
-    { n: 1, d: 8,  label: "1/8" },     // 0.125
-    { n: 1, d: 6,  label: "1/6" },     // ~0.166
-    { n: 1, d: 5,  label: "1/5" },     // 0.2
-    { n: 1, d: 4,  label: "1/4" },     // 0.25
-    { n: 1, d: 3,  label: "1/3" },     // ~0.333
-    { n: 2, d: 5,  label: null },      // 0.4
-    
+    { n: 1, d: 8, label: "1/8" },     // 0.125
+    { n: 1, d: 6, label: "1/6" },     // ~0.166
+    { n: 1, d: 5, label: "1/5" },     // 0.2
+    { n: 1, d: 4, label: "1/4" },     // 0.25
+    { n: 1, d: 3, label: "1/3" },     // ~0.333
+    { n: 2, d: 5, label: null },      // 0.4
+
     // High range (Major splits)
-    { n: 1, d: 2,  label: "1/2" },     // 0.5
-    { n: 3, d: 5,  label: null },      // 0.6
-    { n: 2, d: 3,  label: "2/3" },     // ~0.666
-    { n: 3, d: 4,  label: "3/4" },     // 0.75
-    { n: 4, d: 5,  label: null },      // 0.8
-    { n: 5, d: 6,  label: "5/6" },     // ~0.833 (Unhidden per request)
-    { n: 7, d: 8,  label: null },      // 0.875 (Hidden per request)
-    { n: 1, d: 1,  label: "Full" }     // 1.0
+    { n: 1, d: 2, label: "1/2" },     // 0.5
+    { n: 3, d: 5, label: null },      // 0.6
+    { n: 2, d: 3, label: "2/3" },     // ~0.666
+    { n: 3, d: 4, label: "3/4" },     // 0.75
+    { n: 4, d: 5, label: null },      // 0.8
+    { n: 5, d: 6, label: "5/6" },     // ~0.833 (Unhidden per request)
+    { n: 7, d: 8, label: null },      // 0.875 (Hidden per request)
+    { n: 1, d: 1, label: "Full" }     // 1.0
 ];
 
 // Helper: Get decimal value
@@ -45,19 +45,200 @@ function calculateRateFromFraction(fractionObj, currentBeltSpeed) {
 function getSmartLabel(currentRate, maxSpeed) {
     if (maxSpeed <= 0) return "0%";
     const ratio = currentRate / maxSpeed;
-    
+
     // 1. Check for exact/near match in our constants
-    const epsilon = 0.002; 
-    const match = BELT_FRACTIONS.find(f => Math.abs((f.n/f.d) - ratio) < epsilon);
-    
+    const epsilon = 0.002;
+    const match = BELT_FRACTIONS.find(f => Math.abs((f.n / f.d) - ratio) < epsilon);
+
     const percent = (ratio * 100).toFixed(1) + "%";
-    
+
     if (match) {
         const fracStr = (match.n === 1 && match.d === 1) ? "Full Belt" : `${match.n}/${match.d} Belt`;
-        const isApprox = Math.abs((match.n/match.d) - ratio) > 0.000001;
+        const isApprox = Math.abs((match.n / match.d) - ratio) > 0.000001;
         const prefix = isApprox ? "~" : "";
         return `${prefix}${fracStr}, ${percent}`;
     }
-    
+
     return `${percent} Load`;
+}
+
+// --- ITEM ID REGISTRY (Auto-Generated 2026-01-10) ---
+// Used for compact code import/export. 
+// Index = ID. Value = Item Name.
+const ITEM_REGISTRY = [
+    "Adamant",
+    "Advanced Fertilizer",
+    "Aqua Vitae",
+    "Bandage",
+    "Basic Fertilizer",
+    "Black Powder",
+    "Blast Potion",
+    "Brandy",
+    "Brick",
+    "Broken Shard",
+    "Bronze Ingot",
+    "Bronze Rivet",
+    "Chamomile",
+    "Chamomile Powder",
+    "Chamomile Seed",
+    "Charcoal",
+    "Charcoal Powder",
+    "Clay",
+    "Clay Powder",
+    "Coal",
+    "Coal Ore",
+    "Coke",
+    "Coke Powder",
+    "Copper Bearing",
+    "Copper Coin",
+    "Copper Ingot",
+    "Copper Powder",
+    "Crown",
+    "Crude Crystal",
+    "Crude Gold Dust",
+    "Crude Shard",
+    "Crude Silver Powder",
+    "Diamond",
+    "Dull Shard",
+    "Emerald",
+    "Eternal Catalyst",
+    "Fairy Dust",
+    "Fairy Tear",
+    "Fertile Catalyst",
+    "Flax",
+    "Flax Fiber",
+    "Flax Seed",
+    "Fruit Wine",
+    "Gentian",
+    "Gentian Nectar",
+    "Gentian Powder",
+    "Gentian Seed",
+    "Glass",
+    "Gloom Fungus",
+    "Gloom Spores",
+    "Gold Coin",
+    "Gold Dust",
+    "Gold Ingot",
+    "Growth Potion",
+    "Healing Potion",
+    "Impure Copper Powder",
+    "Impure Gold Dust",
+    "Impure Silver Powder",
+    "Iron Ingot",
+    "Iron Nails",
+    "Iron Ore",
+    "Iron Sand",
+    "Jupiter",
+    "Lapis Lazuli",
+    "Large Wooden Gear",
+    "Lavender",
+    "Lavender Essential Oil",
+    "Lavender Seed",
+    "Limestone",
+    "Limewater",
+    "Linen",
+    "Linen Rope",
+    "Linen Thread",
+    "Linseed Oil",
+    "Logs",
+    "Luna",
+    "Malachite",
+    "Mars",
+    "Mercury",
+    "Meteorite",
+    "Moon Tear",
+    "Moonlit Soap",
+    "Mortar",
+    "Oblivion Essence",
+    "Obsidian",
+    "Panacea Potion",
+    "Perfect Diamond",
+    "Perfumed Soap",
+    "Perfumed Soap Powder",
+    "Philosopher's Stone",
+    "Plank",
+    "Plant Ash",
+    "Pocket Watch",
+    "Polished Crystal",
+    "Pure Gold Dust",
+    "Pyrite Ore",
+    "Quartz Ore",
+    "Quicklime",
+    "Quicklime Powder",
+    "Quicksilver",
+    "Red Currant Seed",
+    "Redcurrant",
+    "Resonant Catalyst",
+    "Rock Salt",
+    "Rotten Log",
+    "Ruby",
+    "Sage",
+    "Sage Powder",
+    "Sage Seed",
+    "Salt",
+    "Salt Water",
+    "Sand",
+    "Sapphire",
+    "Saturn",
+    "Shattered Crystal",
+    "Silver Amulet",
+    "Silver Coin",
+    "Silver Ingot",
+    "Silver Powder",
+    "Small Wooden Gear",
+    "Soap",
+    "Soap Powder",
+    "Sol",
+    "Star Dust",
+    "Steel Gear",
+    "Steel Ingot",
+    "Stone",
+    "Sulfur",
+    "Sulfur Powder",
+    "Sulfuric Acid",
+    "Topaz",
+    "Transformation Potion",
+    "Turquoise",
+    "Unstable Catalyst",
+    "Venus",
+    "Vitality Essence",
+    "Vitality Potion",
+    "Volcanic Ash",
+    "Wooden Pulley",
+    "World Tree Core",
+    "World Tree Leaf",
+    "World Tree Seed",
+    "Yeast Powder"
+];
+
+// --- CODE KEYS (Compact Serialization) ---
+const CODE_KEYS = {
+    // 1. Top Level
+    "v": "v",
+    "target": "t",
+    "settings": "s",
+    "upgrades": "u",
+    "lists": "l",
+
+    // 2. Target Keys
+    "item": "i",
+    "rate": "r",
+
+    // 3. Settings Keys
+    "fuel": "f",
+    "fert": "e",
+    "selfFeed": "sf",
+    "selfFert": "se",
+    "showMax": "sm",
+
+    // 4. List Keys
+    "preferred": "p",
+    "recyclers": "y",
+    "externals": "x"
+};
+
+// Reverse Map for Import
+const REVERSE_CODE_KEYS = {};
+for (let k in CODE_KEYS) {
+    REVERSE_CODE_KEYS[CODE_KEYS[k]] = k;
 }

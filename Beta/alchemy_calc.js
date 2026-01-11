@@ -4,11 +4,12 @@
    ========================================================================== */
 
 let rowCounter = 0;
-let globalByproducts = {};
-let activeRecyclers = {}; // { "ItemName": true }
-let externalOverrides = {}; // { "pathKey": true }
-let globalUserExternalInputs = {}; // { "ItemName": totalRate }
-let lastTargetItem = "";
+window.globalByproducts = {};
+window.activeRecyclers = {}; // { "ItemName": true }
+window.externalOverrides = {}; // { "pathKey": true }
+window.globalUserExternalInputs = {}; // { "ItemName": totalRate }
+window.lastTargetItem = "";
+window.suppressReset = false; // Flag to prevent wiping settings during Import
 
 /* ==========================================================================
    SECTION: HELPER MATH FUNCTIONS
@@ -85,7 +86,8 @@ function calculate() {
         const targetRate = parseFloat(document.getElementById('targetRate').value) || 0;
 
         // --- RESET LOGIC ---
-        if (targetItem !== lastTargetItem) {
+        // Modified for Safe Import: Suppress reset if global flag is set
+        if (!window.suppressReset && targetItem !== lastTargetItem) {
             console.log(`Target change detected: ${lastTargetItem} -> ${targetItem}. Resetting overrides.`);
             activeRecyclers = {};
             externalOverrides = {};
@@ -728,7 +730,7 @@ function calculatePass(p, isGhost) {
         // 2. Fuel
         if (!p.selfFeed && globalFuelDemandItems > 0) {
             extHTML += `
-                <div class="ext-grid-val" style="color:var(--heat)">${formatVal(globalFuelDemandItems)}/m</div>
+                <div class="ext-grid-val" style="color:var(--fuel)">${formatVal(globalFuelDemandItems)}/m</div>
                 <div class="ext-grid-item">
                     ${p.selectedFuel}
                     <div class="ext-grid-note">(Fuel)</div>
@@ -863,8 +865,18 @@ window.toggleRecycle = function (item) {
 };
 
 window.toggleExternal = function (pathKey) {
-    console.log("Toggling External: " + pathKey);
-    if (externalOverrides[pathKey]) delete externalOverrides[pathKey];
-    else externalOverrides[pathKey] = true;
+    if (externalOverrides[pathKey]) {
+        delete externalOverrides[pathKey];
+    } else {
+        externalOverrides[pathKey] = true;
+        // Clean up children: Remove any existing overrides that are descendants of this path
+        const parentPrefix = pathKey + "|";
+        Object.keys(externalOverrides).forEach(key => {
+            if (key.startsWith(parentPrefix)) {
+                console.log("Removing child override due to parent toggle:", key);
+                delete externalOverrides[key];
+            }
+        });
+    }
     calculate();
 };
