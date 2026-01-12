@@ -242,3 +242,6 @@ const REVERSE_CODE_KEYS = {};
 for (let k in CODE_KEYS) {
     REVERSE_CODE_KEYS[CODE_KEYS[k]] = k;
 }
+
+// --- GAME LOGIC CAPS ---
+const PIPE_CAP_PER_MIN = 6000; // 100 items per second

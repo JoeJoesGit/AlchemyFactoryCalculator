@@ -4,7 +4,7 @@
    ========================================================================== */
 
 let DB = null;
-const APP_VERSION = "v101"; // UI Version
+const VERSION = 'v102'; // UI Version
 const OLD_STORAGE_KEY = "alchemy_factory_save_v1"; // Deprecated key
 const SETTINGS_KEY = "alchemy_settings_v1";        // User Prefs (Belt level, etc)
 const CUSTOM_DB_KEY = "alchemy_custom_db_v1";      // Custom Recipe Data
@@ -224,9 +224,9 @@ function init() {
 }
 
 function initHeader() {
-    document.title = `Alchemy Factory Planner - ${APP_VERSION}`;
+    document.title = `Alchemy Factory Planner - ${VERSION}`;
     const verEls = document.querySelectorAll('.app-version');
-    verEls.forEach(el => el.innerText = APP_VERSION);
+    verEls.forEach(el => el.innerText = VERSION);
     const clLinks = document.querySelectorAll('.changelog-link');
     clLinks.forEach(el => {
         if (el.tagName === 'A') {
@@ -1290,6 +1290,7 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
     let externalHeat = !p.selfFeed ? heat : 0;
     let internalBio = p.selfFert ? bio : 0;
     let externalBio = !p.selfFert ? bio : 0;
+    const isLiquid = targetItemDef.category === "Liquid" || targetItemDef.category === "Gas";
     let profitHtml = "";
     if (targetItemDef.sellPrice) {
         const revenuePerMin = p.targetRate * targetItemDef.sellPrice;
@@ -1324,13 +1325,18 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
         </div>
     `;
 
+    // Belt Usage Logic
+    const beltUsageHtml = isLiquid
+        ? `<span class="stat-value" style="font-size:1.1em; color:#aaa;">N/A</span><span class="stat-sub">Liquid/Gas</span>`
+        : `<span class="stat-value" style="font-size:1.1em; color:${p.targetRate > p.beltSpeed ? '#ff5252' : '#aaa'};">${(p.targetRate / p.beltSpeed * 100).toFixed(0)}%</span><span class="stat-sub">Cap: ${p.beltSpeed}/m</span>`;
+
     document.getElementById('summary-container').innerHTML = `
         <div class="summary-box">
             <div class="stat-block"><span class="stat-label">Net Output</span><span class="stat-value ${p.targetRate >= 0 ? 'net-positive' : 'net-warning'}" style="font-size:1.5em">${formatVal(p.targetRate)} / min</span>${deductionText.length > 0 ? `<span class=\"stat-sub\" style=\"font-size:0.75em\">${deductionText.join('<br>')}</span>` : ''}</div>
             <div class="stat-block"><span class="stat-label">Internal Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: ${formatVal(internalHeat)} P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: ${formatVal(internalBio)} V/s</span></div>
             <div class="stat-block"><span class="stat-label">External Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: ${formatVal(externalHeat)} P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: ${formatVal(externalBio)} V/s</span></div>
             ${profitHtml}
-            <div class="stat-block"><span class="stat-label">Belt Usage (Net)</span><span class="stat-value" style="font-size:1.1em; color:${p.targetRate > p.beltSpeed ? '#ff5252' : '#aaa'};">${(p.targetRate / p.beltSpeed * 100).toFixed(0)}%</span><span class="stat-sub">Cap: ${p.beltSpeed}/m</span></div>
+            <div class="stat-block"><span class="stat-label">Belt Usage (Net)</span>${beltUsageHtml}</div>
             ${shareHtml}
         </div>`;
 

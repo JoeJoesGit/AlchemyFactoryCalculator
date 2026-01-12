@@ -26,6 +26,16 @@
     font-weight: bold;
 }
 
+.cap-warning {
+    color: #ff8c00;
+    /* Dark Orange as requested */
+    font-weight: bold;
+    cursor: help;
+    margin-right: 6px;
+    font-size: 1.1em;
+    vertical-align: middle;
+}
+
 .curr-s {
     color: #e0e0e0;
     font-weight: bold;

@@ -511,16 +511,50 @@ function calculatePass(p, isGhost) {
                 const maxBatchesPerMin = (60 / effectiveBaseTime) * p.speedMult;
                 const isLiquid = (itemDef.liquid === true);
                 let effectiveBatchesPerMin = maxBatchesPerMin;
+                let capReason = null;
 
-                // Belt constraint
+                // Belt & Pipe Constraints
                 if (!isLiquid) {
                     const maxItemsPerMin = maxBatchesPerMin * batchYield;
-                    if (maxItemsPerMin > p.beltSpeed) { effectiveBatchesPerMin = p.beltSpeed / batchYield; }
+
+                    // Cap based on Belt Speed
+                    if (maxItemsPerMin > p.beltSpeed) {
+                        effectiveBatchesPerMin = p.beltSpeed / batchYield;
+                        capReason = `Belt Limit (${p.beltSpeed}/m)`;
+                    }
+                } else {
+                    // Universal Pipe Cap for Liquids
+                    const currentOutput = maxBatchesPerMin * batchYield;
+                    if (currentOutput > PIPE_CAP_PER_MIN) {
+                        effectiveBatchesPerMin = PIPE_CAP_PER_MIN / batchYield;
+                        capReason = `Pipe Output Limit (${(PIPE_CAP_PER_MIN / 60).toFixed(0)}/s)`;
+                    }
                 }
 
-                let rawMachines = batchesPerMin / effectiveBatchesPerMin;
-                if (Math.abs(Math.round(rawMachines) - rawMachines) < 0.0001) { rawMachines = Math.round(rawMachines); }
-                machinesNeeded = rawMachines;
+                let rawMachinesCapped = batchesPerMin / effectiveBatchesPerMin;
+                if (Math.abs(Math.round(rawMachinesCapped) - rawMachinesCapped) < 0.0001) { rawMachinesCapped = Math.round(rawMachinesCapped); }
+                machinesNeeded = rawMachinesCapped;
+
+                // --- CAP WARNING LOGIC (REFINED) ---
+                // Only warn if the cap actually forced us to build MORE machines
+                if (capReason) {
+                    const maxThroughputUncapped = maxBatchesPerMin * batchYield;
+                    // If calculate uncapped count:
+                    // effUncapped = maxBatchesPerMin (unless belt limited? Wait, belt limit IS a cap reason)
+                    // So we compare against 'maxBatchesPerMin' as the 'pure speed' baseline.
+
+                    let effUncapped = maxBatchesPerMin;
+                    // Note: If belt speed < max speed, that IS a cap. We want to know if Belt/Pipe limit checks
+                    // changed the result vs just "Speed Upgrade Limit".
+
+                    let rawMachinesUncapped = batchesPerMin / effUncapped;
+                    const cappedCount = Math.ceil(machinesNeeded - 0.0001);
+                    const uncappedCount = Math.ceil(rawMachinesUncapped - 0.0001);
+
+                    if (cappedCount <= uncappedCount) {
+                        capReason = null; // Cap didn't change the integer count, hide warning
+                    }
+                }
 
                 // Track Bio Load for Nurseries
                 if (recipe.machine === "Nursery" && itemDef.nutrientCost) {
@@ -612,6 +646,11 @@ function calculatePass(p, isGhost) {
                     let tooltipText = `Recipe: ${inputsStr} -> ${outputsStr}\nBase Time: ${recipe.baseTime}s\nSpeed Mult: ${p.speedMult.toFixed(2)}x\nCycle Time: ${cycleTime.toFixed(2)}s${alchemyLine}\nThroughput: ${throughput.toFixed(2)} items/min per machine`;
 
                     /* capTag declared above */
+                    let capWarningIcon = "";
+                    if (capReason) {
+                        capWarningIcon = `<span class="cap-warning" title="Capped by ${capReason}">&#9888;</span>`;
+                    }
+
                     if (p.showMax) {
                         const maxOutput = Math.ceil(machinesNeeded) * throughput;
                         capTag = `<span class="max-cap-tag">(Max: ${formatVal(maxOutput)}/m)</span>`;
@@ -620,7 +659,7 @@ function calculatePass(p, isGhost) {
                     const itemNameForAttr = item.replace(/'/g, "");
                     const machineName = recipe.machine; // Assuming recipe.machine is the machine name
                     const plural = Math.ceil(machinesNeeded) === 1 ? '' : 's'; // Determine pluralization
-                    machineTag = `<span class="machine-tag" title="${tooltipText}" onmouseover="highlightMachine('${machineName}')" onmouseout="removeHighlight()">${Math.ceil(machinesNeeded)} ${machineName}${plural}</span>`;
+                    machineTag = `<span class="machine-tag" title="${tooltipText}" onmouseover="highlightMachine('${machineName}')" onmouseout="removeHighlight()">${Math.ceil(machinesNeeded)} ${machineName}${plural}</span>${capWarningIcon}`;
 
                     // Add ExtTag to normal nodes too - MOVED to Action Buttons
                     // outputTag += extTag;

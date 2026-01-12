@@ -1,5 +1,28 @@
 # Alchemy Factory Calculator Change Log
 
+## v102 - Physics, Limits & Stability (2026-01-11)
+* **Critical Fix:** **Restored Application State.**
+    *   Recovered `alchemy_ui.js` from a severe truncation error that was preventing the application from initializing.
+    *   Restored core functionality including the Item Selector and Summary Box.
+*   **Logic:** **Nursery Physics Refactor.**
+    * Completely rewrote Nursery math. Cycle time is now dynamic based on **Nutrient Cost** (Power) rather than a static time.
+    * This fixes complex recipes like **Gentian** (which produces both Herb + Nectar) and properly scales production with Fertility multipliers.
+    * **Seeds:** Seeds are no longer a repeating input. They are now tracked as a **One-Time Construction Cost** (1 Seed per Machine).
+*   **UI:** **Construction Seeds.** The Construction List now displays the required number of seeds to build the planned nurseries (e.g., "Sage Seed: 9").
+*   **Feature:** **Universal Pipe Cap.**
+    * Implemented a hard **Simulated Flow Limit** of **6000 items/min** (100/sec) for all liquid-outputting machines (Extractors, Alembics, etc.), matching the game's actual pipe throughput limits.
+    * **Impact:** If your speed upgrades would theoretically produce >6000/m per machine, the calculator now clamps the output and forces you to build more machines to meet the demand.
+*   **Feature:** **Belt Usage Logic.**
+    *   The "Belt Usage (Net)" stat now correctly displays **N/A** for liquid and gas items (which travel in pipes), reducing confusion.
+*   **UI:** **Smart Warning System.**
+    * Added a "Constraint Warning" icon (⚠️) that appears next to machine counts when a limit is hit.
+    * **Smart Logic:** The icon *only* appears if the cap forces you to build **more machines** than you would otherwise need. (If you need 2 machines for volume anyway, it stays hidden).
+    * **Tooltip:** Hovering the icon tells you exactly what is bottling the line (e.g., "Capped by Pipe Output Limit" or "Capped by Belt Limit").
+*   **Tool:** **Code Inspector Integration.**
+    * The **"Chain Code"** inspector is now fully integrated into the main app (new Tab in header).
+    * Includes "Import Current" button to instantly debug your active build without manual copying/pasting.
+*   **Note:** The "Show Machine Max Cap" toggle is present in the UI but currently non-functional as its logic was lost during the recovery.
+
 ## v101 - Robust Sharing & Optimization (2026-01-10)
 * **Feature:** **Robust Sharing Links.**
     * **UI:** Added code generation to the Production Tree that allows users to generate a shareable link for their current build, with a more compact code that contains more data than using the verbose format.
