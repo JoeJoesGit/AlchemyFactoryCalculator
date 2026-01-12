@@ -439,12 +439,17 @@ window.ALCHEMY_DB = {
             "baseTime": 6.0
         },
         {
-            "id": "SilverPowder3_Alt", "machine": "Advanced Athanor",
+            "id": "CopperPowder2_Alt", "machine": "Refiner",
+            "inputs": { "Impure Copper Powder": 2 }, "outputs": { "Copper Powder": 1 },
+            "baseTime": 6.0
+        },
+        {
+            "id": "SilverPowder3_Alt", "machine": "Refiner",
             "inputs": { "Impure Silver Powder": 2 }, "outputs": { "Silver Powder": 1 },
             "baseTime": 8.0
         },
         {
-            "id": "GoldDust3_Alt", "machine": "Advanced Athanor",
+            "id": "GoldDust3_Alt", "machine": "Refiner",
             "inputs": { "Impure Gold Dust": 2 }, "outputs": { "Gold Dust": 1 },
             "baseTime": 10.0
         },
