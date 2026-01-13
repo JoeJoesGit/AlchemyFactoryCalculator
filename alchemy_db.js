@@ -1,5 +1,5 @@
 window.ALCHEMY_DB = {
-    "timestamp": "2026-01-13T18:39:00", // Updated for Hybrid Panacea 
+    "timestamp": "2026-01-13T18:39:00", // Updated metal powder recipes
     "items": {
         // --- 1. RAW RESOURCES ---
         "Logs": { "id": 75, "category": "Raw Materials", "buyPrice": 200, "heat": 2000 },
@@ -488,3 +488,4 @@ window.ALCHEMY_DB = {
     ]
 
 };
+
