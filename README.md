@@ -39,4 +39,4 @@ If you don't want to use the web version, you can run this on your own computer:
 2.  Keep them in the same folder.
 3.  Double-click `index.html` to open it in your browser.
 
-That's it! No servers or installation required.
+That's it! No servers or installation required. 
