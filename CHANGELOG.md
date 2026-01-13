@@ -1,5 +1,22 @@
 # Alchemy Factory Calculator Change Log
 
+## v103 - Recursive Stability & UI Flow (2026-01-13)
+* **Critical Fix:** **Recursive Loop Stability.**
+    *   Replaced the "Binary Average" solver with a **Proportional Feedback (Heavy Damping)** system.
+    *   **Impact:** Solves the instability in high-gain self-feeding loops (like **Pure Gold Dust recycle cycles**), causing them to converge rapidly to the mathematically correct efficiency point instead of oscillating wildly.
+* **Fix:** **Self-Pruning Logic.**
+    *   Fixed a "Cold Start" bug where the calculator would delete machines (0 count) if recycling theoretically covered 100% of demand, preventing the chain from ever starting.
+    *   The Logic now ensures machines remain visible during the simulation phase so they can generate the initial byproduct pulse needed to sustain the loop.
+* **UI:** **Layout Optimization.**
+    *   Moved the **Requirements Area** (External Inputs & Byproducts) to be **above** the Construction List in the 3rd column.
+    *   **Goal:** This places the "Inputs & Outputs" summary in a more logical visual flow before the final "Build Verification" list.
+* **Feature:** **Recycle All.**
+    *   Added a **"Recycle All"** button to the top of the Byproducts list (appears when 2+ items are present).
+    *   **Logic:** One-click toggle to enable recycling for all visible byproducts. If any are off, it turns all ON. If all are on, it turns all OFF.
+* **Optimization:** **Export Sanitization.**
+    *   The "Copy Code" function now intelligently **filters out Ghost States**.
+    *   **Benefit:** If you have recycling enabled for an item that is no longer being produced in your current chain, it is excluded from the generated code, keeping sharing links clean and precise.
+
 ## v102 - Physics, Limits & Stability (2026-01-11)
 * **Critical Fix:** **Restored Application State.**
     *   Recovered `alchemy_ui.js` from a severe truncation error that was preventing the application from initializing.

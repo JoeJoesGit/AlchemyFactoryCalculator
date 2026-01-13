@@ -4,7 +4,7 @@
    ========================================================================== */
 
 let DB = null;
-const VERSION = 'v102'; // UI Version
+const VERSION = 'v103'; // UI Version
 const OLD_STORAGE_KEY = "alchemy_factory_save_v1"; // Deprecated key
 const SETTINGS_KEY = "alchemy_settings_v1";        // User Prefs (Belt level, etc)
 const CUSTOM_DB_KEY = "alchemy_custom_db_v1";      // Custom Recipe Data
@@ -1513,7 +1513,15 @@ function exportStateFromUI() {
     }
 
     // Recyclers: [ItemName] -> [ItemID]
-    const recRaw = Object.keys(activeRecyclers || {});
+    // Recyclers: [ItemName] -> [ItemID]
+    // SANITIZATION: Only export recyclers that are actually valid byproducts in this config
+    // This prevents "Ghost States" (items toggled in background but not produced) from ballooning code size
+    const recRaw = Object.keys(activeRecyclers || {}).filter(name => {
+        // Use the global totalByproducts map from alchemy_calc.js
+        // If window.totalByproducts is undefined (unlikely if calc ran), fallback to true to be safe
+        if (typeof window.totalByproducts === 'undefined') return true;
+        return (window.totalByproducts[name] || 0) > 0;
+    });
     lst[k.recyclers] = recRaw.map(name => (DB.items[name] ? DB.items[name].id : name));
 
     // Externals: [Path] -> [PackedPath] ("ItemA|ItemB" -> "12|34")

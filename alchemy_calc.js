@@ -9,6 +9,7 @@ window.activeRecyclers = {}; // { "ItemName": true }
 window.externalOverrides = {}; // { "pathKey": true }
 window.globalUserExternalInputs = {}; // { "ItemName": totalRate }
 window.activeSeedDemand = {}; // { "ItemName": count }
+window.globalRecycledDemand = {}; // { "ItemName": totalRateRequested }
 window.lastTargetItem = "";
 window.suppressReset = false; // Flag to prevent wiping settings during Import
 
@@ -82,7 +83,9 @@ function calculate() {
         if (!DB || !DB.recipes) return;
 
         // 1. Gather Inputs
-        let rawInput = document.getElementById('targetItemInput').value.trim();
+        let rawInput = document.getElementById('targetItemInput').value;
+        "use strict";
+        rawInput = rawInput.trim();
         let targetItem = Object.keys(DB.items).find(k => k.toLowerCase() === rawInput.toLowerCase()) || rawInput;
         const targetRate = parseFloat(document.getElementById('targetRate').value) || 0;
 
@@ -220,7 +223,12 @@ function calculatePass(p, isGhost) {
 
             // We do NOT need seedByproducts anymore because we re-simulate everything in the loop
 
-            for (let i = 0; i < 10; i++) {
+            // History buffer for Adaptive Damping
+            let stockHistory = {};
+            let unstableKeys = {};
+            // window.debugTrace = []; // REMOVED: Do not clear trace here!
+
+            for (let i = 0; i < 25; i++) {
                 // Setup Environment: 
                 // Stock = What was produced last pass.
                 // Accumulator = Starts at 0 for this pass.
@@ -252,12 +260,57 @@ function calculatePass(p, isGhost) {
                     buildNode(p.selectedFert, prevFert, true, [], true, false);
                 }
 
-                lastPassGenerated = { ...iterationGenerated };
+                // ADAPTIVE DAMPING LOGIC
+                // Resolve Next Iteration's Input (lastPassGenerated) based on this Iteration's Output (iterationGenerated)
+                let nextPassGenerated = {};
+                let hasOscillation = false;
+
+                const allKeys = new Set([...Object.keys(lastPassGenerated), ...Object.keys(iterationGenerated)]);
+
+                allKeys.forEach(k => {
+                    const oldVal = lastPassGenerated[k] || 0;
+                    const newVal = iterationGenerated[k] || 0;
+
+                    // Update History
+                    if (!stockHistory[k]) stockHistory[k] = [];
+                    stockHistory[k].push(newVal);
+                    if (stockHistory[k].length > 4) stockHistory[k].shift();
+
+                    // Check for Oscillation (Flip-Flop)
+                    if (!unstableKeys[k] && stockHistory[k].length >= 3) {
+                        const hist = stockHistory[k];
+                        const d1 = hist[hist.length - 1] - hist[hist.length - 2];
+                        const d2 = hist[hist.length - 2] - hist[hist.length - 3];
+
+                        // If direction passes zero (Pos->Neg or Neg->Pos) and magnitude is significant > 0.05
+                        if (d1 * d2 < 0 && Math.abs(d1) > 0.05) {
+                            unstableKeys[k] = true;
+                        }
+                    }
+
+
+                    // --- HEAVY DAMPING SCALAR ---
+                    // Analysis shows High-Gain loops (Slope -4) are unstable at 0.5 average.
+                    // We need a lower learning rate (Alpha ~ 0.2) to converge.
+                    // next = old * 0.8 + new * 0.2
+
+                    if (unstableKeys[k]) {
+                        // Use 0.2 update rate (Heavy Damping) to handle high-ratio loops
+                        nextPassGenerated[k] = (oldVal * 0.8) + (newVal * 0.2);
+                        hasOscillation = true;
+                    } else {
+                        nextPassGenerated[k] = newVal;
+                    }
+                });
+
+                lastPassGenerated = { ...nextPassGenerated };
 
                 let nextFuel = globalFuelDemandItems;
                 let nextFert = globalFertDemandItems;
 
-                if (Math.abs(nextFuel - prevFuel) < 0.01 && Math.abs(nextFert - prevFert) < 0.01) {
+                // Convergence Check: Fuel/Fert stable AND no active oscillation
+                // FIX: Ensure we run at least 5 iterations to detect oscillation patterns (history length 4)
+                if (i > 4 && !hasOscillation && Math.abs(nextFuel - prevFuel) < 0.01 && Math.abs(nextFert - prevFert) < 0.01) {
                     stableFuelDemand = nextFuel;
                     stableFertDemand = nextFert;
                     break;
@@ -288,6 +341,10 @@ function calculatePass(p, isGhost) {
             }
 
             stableByproducts = { ...globalByproducts };
+            // Clean tiny floating point errors
+            Object.keys(stableByproducts).forEach(k => {
+                if (Math.abs(stableByproducts[k]) < 0.001) delete stableByproducts[k];
+            });
         }
     }
 
@@ -338,36 +395,39 @@ function calculatePass(p, isGhost) {
         const pathKey = ancestors.join("|") + "|" + item;
         let canRecycle = false;
 
-        // VISIBILITY LOGIC:
         if (effectiveGhost) {
-            // SIMULATION PHASE: Determine what can be recycled based on available byproducts STOCK
-            let availableStock = currentPassStock[item] || 0;
+            // --- SIMULATION PHASE ---
+            const availableStock = currentPassStock[item] || 0;
 
-            if (activeRecyclers[item] && availableStock > 0.01) {
-                deduction = Math.min(rate, availableStock);
+            if (activeRecyclers[item]) {
+                canRecycle = true;
+                // TRACK DEMAND for Solver (Accumulate in Ghost Phase)
+                window.globalRecycledDemand[item] = (window.globalRecycledDemand[item] || 0) + rate;
 
-                // Deduct from Stock (Limit) AND Accumulator (Display/Net)
-                currentPassStock[item] -= deduction;
-                globalByproducts[item] = (globalByproducts[item] || 0) - deduction;
-
+                // Apply Deduction
+                if (availableStock > 0.000001) {
+                    deduction = Math.min(rate, availableStock);
+                    currentPassStock[item] -= deduction;
+                    globalByproducts[item] = (globalByproducts[item] || 0) - deduction;
+                }
             } else if (availableStock > 0.01) {
-                // Check if we should auto-enable? (Legacy logic kept separate)
+                // Auto-detection for UI button
                 canRecycle = true;
             }
 
-            // Store the decision for the Render Phase
             recyclingMap[pathKey] = deduction;
+
         } else {
-            // RENDER PHASE: Blindly follow the Simulation's decision
-            // This prevents "Self-Eating" where consuming the byproduct prevents the machine from being built
+            // --- RENDER PHASE ---
+            // Use the decision from the last simulation pass
             deduction = recyclingMap[pathKey] || 0;
 
-            // FIX: Do NOT deduct from stableByproducts again. 
-            // stableByproducts captures the NET result of the Simulation pass (Gross - Recycled).
-            // Subtracting here would double-dip and cause negative numbers.
-
-            if (activeRecyclers[item]) canRecycle = true;
-            else if ((stableByproducts[item] || 0) > 0.01) canRecycle = true;
+            if (activeRecyclers[item]) {
+                canRecycle = true;
+                // Note: We don't track demand here, strictly speaking, as the solver is done.
+            } else if ((stableByproducts[item] || 0) > 0.01) {
+                canRecycle = true;
+            }
         }
 
         const netRate = Math.max(0, rate - deduction);
@@ -856,7 +916,28 @@ function calculatePass(p, isGhost) {
         const bypDiv = document.createElement('div'); bypDiv.className = 'node flat-node';
         let bypHTML = '';
         const sortedByproducts = Object.keys(totalByproducts).sort();
+
+        // Store visible byproducts globally for the Toggle All logic
+        window.currentByproductKeys = sortedByproducts;
+
         if (sortedByproducts.length > 0) {
+
+            // --- RECYCLE ALL ROW ---
+            if (sortedByproducts.length >= 2) {
+                // Check state: Are ALL visible items currently recycling?
+                const allOn = sortedByproducts.every(k => activeRecyclers[k]);
+                const masterBtnClass = allOn ? "btn-recycle-on" : "btn-recycle-off";
+                const masterIconClass = allOn ? "recycle-icon-white" : "recycle-icon-green";
+
+                // Toggle Button (Matches styles of Item rows)
+                const masterToggle = `<button class="split-btn ${masterBtnClass} btn-recycle-icon-only" onclick="toggleRecycleAll(); event.stopPropagation();" title="Toggle Recycling For All Visible Byproducts"><span class="${masterIconClass} recycle-icon-only">♻</span></button>`;
+
+                // Label (Matches Style)
+                const masterLabel = `<span style="font-weight:bold; margin-left:8px;">Recycle All</span>`;
+
+                bypHTML += `<div class="node-content bg-transparent" style="display:flex; align-items:center; border-bottom:1px solid #444; margin-bottom:4px; padding-bottom:4px;">${masterToggle}${masterLabel}</div>`;
+            }
+
             sortedByproducts.forEach(item => {
                 let remaining = stableByproducts[item] || 0;
                 let note = "";
@@ -932,6 +1013,26 @@ function calculatePass(p, isGhost) {
 window.toggleRecycle = function (item) {
     if (activeRecyclers[item]) delete activeRecyclers[item];
     else activeRecyclers[item] = true;
+    calculate();
+};
+
+window.toggleRecycleAll = function () {
+    const visibleKeys = window.currentByproductKeys || [];
+    if (visibleKeys.length === 0) return;
+
+    // Logic: If ANY are OFF -> Turn ALL ON
+    //        If ALL are ON -> Turn ALL OFF
+    const allOn = visibleKeys.every(k => activeRecyclers[k]);
+
+    if (allOn) {
+        // Turn OFF
+        visibleKeys.forEach(k => delete activeRecyclers[k]);
+    } else {
+        // Turn ON
+        visibleKeys.forEach(k => activeRecyclers[k] = true);
+    }
+
+    persist();
     calculate();
 };
 
