@@ -9,6 +9,9 @@
     <!-- Core Styling -->
     <link rel="stylesheet" href="style.css">
 
+    <!-- I18n (must load before other scripts) -->
+    <script src="alchemy_i18n.js"></script>
+
     <!-- Database and Constants -->
     <script src="alchemy_db.js"></script>
     <script src="alchemy_constants.js"></script>
@@ -19,30 +22,34 @@
     <!-- Notification Banner (Hidden by Default) -->
     <div id="update-banner"
         style="display:none; background:#2e7d32; color:white; padding:10px; text-align:center; justify-content:center; align-items:center; gap:15px; font-weight:bold;">
-        <span>New official recipe update available! Your custom database is outdated.</span>
+        <span data-i18n="New official recipe update available! Your custom database is outdated.">New official recipe update available! Your custom database is outdated.</span>
         <button onclick="resetRecipes()"
-            style="background:white; color:#2e7d32; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold;">Update
+            style="background:white; color:#2e7d32; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold;" data-i18n="Update & Overwrite">Update
             & Overwrite</button>
         <button onclick="hideUpdateNotification()"
-            style="background:transparent; color:white; border:1px solid white; padding:5px 10px; border-radius:4px; cursor:pointer;">Ignore</button>
+            style="background:transparent; color:white; border:1px solid white; padding:5px 10px; border-radius:4px; cursor:pointer;" data-i18n="Ignore">Ignore</button>
     </div>
 
     <header>
         <div style="display:flex; align-items:baseline;">
-            <h1>Alchemy Factory Planner</h1>
+            <h1 data-i18n="Alchemy Factory Planner">Alchemy Factory Planner</h1>
             <span style="margin-left: 20px;">
                 <!-- Updated: Version/Changelog first, then GitHub Repo -->
                 <span class="subtitle changelog-link" style="cursor: pointer; margin-right: 15px;">
-                    <span class="app-version">Loading...</span> | View Changelog
+                    <span class="app-version">Loading...</span> | <span data-i18n="View Changelog">View Changelog</span>
                 </span>
                 <a href="https://github.com/JoeJoesGit/AlchemyFactoryCalculator" target="_blank"
-                    class="repo-link">GitHub Repo</a>
+                    class="repo-link" data-i18n="GitHub Repo">GitHub Repo</a>
+                <select id="lang-select" style="margin-left:15px; background:#333; color:#fff; border:1px solid #555; padding:2px 6px; border-radius:4px; cursor:pointer;">
+                    <option value="en">English</option>
+                    <option value="ja">Japanese</option>
+                </select>
             </span>
         </div>
         <div class="tabs">
-            <div class="tab-btn active" onclick="switchTab('calc')">Calculator</div>
-            <div class="tab-btn" onclick="switchTab('db')">Recipe Database</div>
-            <div class="tab-btn" onclick="switchTab('code')">Chain Code</div>
+            <div class="tab-btn active" onclick="switchTab('calc')" data-i18n="Calculator">Calculator</div>
+            <div class="tab-btn" onclick="switchTab('db')" data-i18n="Recipe Database">Recipe Database</div>
+            <div class="tab-btn" onclick="switchTab('code')" data-i18n="Chain Code">Chain Code</div>
         </div>
     </header>
 
@@ -51,7 +58,7 @@
         <div id="recipe-modal" class="modal-overlay" onclick="if(event.target===this) closeModal('recipe-modal')">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 id="recipe-modal-title">Select Recipe</h2>
+                    <h2 id="recipe-modal-title" data-i18n="Select Recipe">Select Recipe</h2>
                     <button class="close-modal" onclick="closeModal('recipe-modal')">&times;</button>
                 </div>
                 <div id="recipe-list"></div>
@@ -62,18 +69,18 @@
         <div id="import-modal" class="modal-overlay">
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header">
-                    <h2>Import Production Chain</h2>
+                    <h2 data-i18n="Import Production Chain">Import Production Chain</h2>
                     <button class="close-modal" onclick="closeModal('import-modal')">&times;</button>
                 </div>
                 <div style="padding: 15px;">
-                    <p style="margin-bottom: 10px; color: #ccc;">Paste your code or URL below:</p>
+                    <p style="margin-bottom: 10px; color: #ccc;" data-i18n="Paste your code or URL below:">Paste your code or URL below:</p>
                     <textarea id="import-code-input" rows="5"
                         style="width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 10px; border-radius: 4px; resize: vertical; margin-bottom: 15px; font-family: monospace;"></textarea>
                     <div style="display: flex; justify-content: flex-end; gap: 10px;">
                         <button onclick="closeModal('import-modal')"
-                            style="padding: 8px 16px; background: transparent; border: 1px solid #666; color: #ccc; border-radius: 4px; cursor: pointer;">Cancel</button>
+                            style="padding: 8px 16px; background: transparent; border: 1px solid #666; color: #ccc; border-radius: 4px; cursor: pointer;" data-i18n="Cancel">Cancel</button>
                         <button onclick="handleImportSubmit()"
-                            style="padding: 8px 16px; background: #2e7d32; border: none; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">Load
+                            style="padding: 8px 16px; background: #2e7d32; border: none; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;" data-i18n="Load Code">Load
                             Code</button>
                     </div>
                 </div>
@@ -84,7 +91,7 @@
         <div id="target-modal" class="modal-overlay" onclick="if(event.target===this) closeModal('target-modal')">
             <div class="modal-content" style="max-width: 800px; height: 80vh; display:flex; flex-direction:column;">
                 <div class="modal-header">
-                    <h2>Select Target Item</h2>
+                    <h2 data-i18n="Select Target Item">Select Target Item</h2>
                     <button class="close-modal" onclick="closeModal('target-modal')">&times;</button>
                 </div>
                 <!-- Layout Container -->
@@ -96,6 +103,7 @@
 
                     <!-- Search -->
                     <input type="text" id="target-search" class="modal-search" placeholder="Search items..."
+                        data-i18n-placeholder="Search items..."
                         autocomplete="off" oninput="renderTargetList()">
 
                     <!-- Grid -->
@@ -114,15 +122,15 @@
                 <div>
                     <div class="panel section-production">
                         <div class="panel-header" onclick="toggleSection(this)">
-                            <h3>Production Goal</h3>
+                            <h3 data-i18n="Production Goal">Production Goal</h3>
                             <span class="toggle-icon">▼</span>
                         </div>
                         <div class="panel-content">
                             <div class="input-group">
-                                <label>Target Item</label>
+                                <label data-i18n="Target Item">Target Item</label>
                                 <input type="hidden" id="targetItemInput" value="">
                                 <button id="btn-target-select" onclick="openTargetModal()">
-                                    <span id="target-btn-text">Select Item</span>
+                                    <span id="target-btn-text" data-i18n="Select Item">Select Item</span>
                                     <span class="arrow">▼</span>
                                 </button>
                             </div>
@@ -130,9 +138,9 @@
 
                                 <!-- Toggle Buttons -->
                                 <div class="row-spread" style="margin-bottom:4px;">
-                                    <button id="mode-belt" class="mode-btn active" onclick="setGoalMode('belt')">Belt
+                                    <button id="mode-belt" class="mode-btn active" onclick="setGoalMode('belt')" data-i18n="Belt Load">Belt
                                         Load</button>
-                                    <button id="mode-machine" class="mode-btn" onclick="setGoalMode('machine')">Machine
+                                    <button id="mode-machine" class="mode-btn" onclick="setGoalMode('machine')" data-i18n="Machine Count">Machine
                                         Count</button>
                                 </div>
 
@@ -160,7 +168,7 @@
                                 </div>
                             </div>
                             <div class="input-group">
-                                <label id="rateLabel">Rate (Items/Min)</label>
+                                <label id="rateLabel" data-i18n="Rate (Items/Min)">Rate (Items/Min)</label>
                                 <div class="spinner-wrapper">
                                     <button class="spinner-btn left first" onclick="adjustRate(-1)">-1</button>
                                     <button class="spinner-btn left" onclick="adjustRate(-0.1)">-0.1</button>
@@ -174,35 +182,35 @@
 
                     <div class="panel section-logistics">
                         <div class="panel-header" onclick="toggleSection(this)">
-                            <h3>Logistics</h3>
+                            <h3 data-i18n="Logistics">Logistics</h3>
                             <span class="toggle-icon">▼</span>
                         </div>
                         <div class="panel-content">
                             <div class="input-group">
-                                <label>Heat Source</label>
+                                <label data-i18n="Heat Source">Heat Source</label>
                                 <select id="fuelSelect" onchange="updateDefaultButtonState(); calculate();"></select>
                                 <input type="checkbox" id="selfFeed" style="display:none;">
                                 <div class="split-btn-container">
                                     <button id="btnSelfFuel" class="split-btn btn-inactive-red"
-                                        onclick="toggleFuel()">Self-Fuel: OFF</button>
-                                    <button id="btnDefFuel" class="split-btn" onclick="setDefaultFuel()">Make
+                                        onclick="toggleFuel()" data-i18n="Self-Fuel: OFF">Self-Fuel: OFF</button>
+                                    <button id="btnDefFuel" class="split-btn" onclick="setDefaultFuel()" data-i18n="Make Default">Make
                                         Default</button>
                                 </div>
                             </div>
                             <div class="input-group">
-                                <label>Fertilizer Source</label>
+                                <label data-i18n="Fertilizer Source">Fertilizer Source</label>
                                 <select id="fertSelect" onchange="updateDefaultButtonState(); calculate();"></select>
                                 <input type="checkbox" id="selfFert" style="display:none;">
                                 <div class="split-btn-container">
                                     <button id="btnSelfFert" class="split-btn btn-inactive-red"
-                                        onclick="toggleFert()">Self-Fert: OFF</button>
-                                    <button id="btnDefFert" class="split-btn" onclick="setDefaultFert()">Make
+                                        onclick="toggleFert()" data-i18n="Self-Fert: OFF">Self-Fert: OFF</button>
+                                    <button id="btnDefFert" class="split-btn" onclick="setDefaultFert()" data-i18n="Make Default">Make
                                         Default</button>
                                 </div>
                             </div>
                             <div class="checkbox-row">
                                 <input type="checkbox" id="showMaxCap" onchange="calculate()">
-                                <label for="showMaxCap" style="display:inline; margin:0; cursor:pointer;">Show
+                                <label for="showMaxCap" style="display:inline; margin:0; cursor:pointer;" data-i18n="Show Machine Max Cap">Show
                                     Machine
                                     Max Cap</label>
                             </div>
@@ -223,7 +231,7 @@
 
                     <div class="panel collapsed">
                         <div class="panel-header" onclick="toggleSection(this)">
-                            <h3>Construction List</h3>
+                            <h3 data-i18n="Construction List">Construction List</h3>
                             <span class="toggle-icon">▼</span>
                         </div>
                         <div class="panel-content">
@@ -237,13 +245,13 @@
                 <div>
                     <div class="panel section-upgrades">
                         <div class="panel-header" onclick="toggleSection(this)">
-                            <h3>Upgrades (Levels)</h3>
+                            <h3 data-i18n="Upgrades (Levels)">Upgrades (Levels)</h3>
                             <span class="toggle-icon">▼</span>
                         </div>
                         <div id="upgradeSummary" class="upgrade-summary"></div>
                         <div class="panel-content">
                             <div class="input-group">
-                                <label>Belt Speed</label>
+                                <label data-i18n="Belt Speed">Belt Speed</label>
                                 <div class="spinner-wrapper">
                                     <button class="spinner-btn left first"
                                         onclick="adjustInput('lvlBelt', -1); updateFromSlider(); updateUpgradeSummary();">-</button>
@@ -254,7 +262,7 @@
                                 </div>
                             </div>
                             <div class="input-group">
-                                <label>Factory Speed</label>
+                                <label data-i18n="Factory Speed">Factory Speed</label>
                                 <div class="spinner-wrapper">
                                     <button class="spinner-btn left first"
                                         onclick="adjustInput('lvlSpeed', -1); calculate(); updateUpgradeSummary();">-</button>
@@ -264,7 +272,7 @@
                                 </div>
                             </div>
                             <div class="input-group">
-                                <label>Alchemy Skill</label>
+                                <label data-i18n="Alchemy Skill">Alchemy Skill</label>
                                 <div class="spinner-wrapper">
                                     <button class="spinner-btn left first"
                                         onclick="adjustInput('lvlAlchemy', -1); calculate(); updateUpgradeSummary();">-</button>
@@ -274,7 +282,7 @@
                                 </div>
                             </div>
                             <div class="input-group">
-                                <label>Fuel Efficiency</label>
+                                <label data-i18n="Fuel Efficiency">Fuel Efficiency</label>
                                 <div class="spinner-wrapper">
                                     <button class="spinner-btn left first"
                                         onclick="adjustInput('lvlFuel', -1); calculate(); updateUpgradeSummary();">-</button>
@@ -284,7 +292,7 @@
                                 </div>
                             </div>
                             <div class="input-group">
-                                <label>Fert Efficiency</label>
+                                <label data-i18n="Fert Efficiency">Fert Efficiency</label>
                                 <div class="spinner-wrapper">
                                     <button class="spinner-btn left first"
                                         onclick="adjustInput('lvlFert', -1); calculate(); updateUpgradeSummary();">-</button>
@@ -298,18 +306,18 @@
 
                     <div class="panel">
                         <div class="panel-header" onclick="toggleSection(this)">
-                            <h3>Save/Reset</h3>
+                            <h3 data-i18n="Save/Reset">Save/Reset</h3>
                             <span class="toggle-icon">▼</span>
                         </div>
                         <div class="panel-content">
-                            <button class="save-btn" onclick="saveSettings()">Save Upgrades</button>
+                            <button class="save-btn" onclick="saveSettings()" data-i18n="Save Upgrades">Save Upgrades</button>
 
                             <!-- Updated Reset Actions -->
                             <div style="display:flex; flex-direction:column; gap:8px; margin-top:15px;">
-                                <button class="reset-btn" onclick="resetSettings()">Reset Settings Only</button>
-                                <button class="reset-btn" onclick="resetRecipes()">Reset Recipes Only</button>
+                                <button class="reset-btn" onclick="resetSettings()" data-i18n="Reset Settings Only">Reset Settings Only</button>
+                                <button class="reset-btn" onclick="resetRecipes()" data-i18n="Reset Recipes Only">Reset Recipes Only</button>
                                 <button class="reset-btn" style="background:#444; color:#fff;"
-                                    onclick="resetFactory()">FULL FACTORY RESET</button>
+                                    onclick="resetFactory()" data-i18n="FULL FACTORY RESET">FULL FACTORY RESET</button>
                             </div>
                         </div>
                     </div>
@@ -323,13 +331,13 @@
                 <!-- Sidebar with Search & Filters -->
                 <div class="db-sidebar">
                     <div class="db-filters">
-                        <button class="filter-btn active" onclick="setDbFilter('all')">All</button>
-                        <button class="filter-btn" onclick="setDbFilter('item')">Items</button>
-                        <button class="filter-btn" onclick="setDbFilter('recipe')">Recipes</button>
-                        <button class="filter-btn" onclick="setDbFilter('machine')">Machines</button>
+                        <button class="filter-btn active" onclick="setDbFilter('all')" data-i18n="All">All</button>
+                        <button class="filter-btn" onclick="setDbFilter('item')" data-i18n="Items">Items</button>
+                        <button class="filter-btn" onclick="setDbFilter('recipe')" data-i18n="Recipes">Recipes</button>
+                        <button class="filter-btn" onclick="setDbFilter('machine')" data-i18n="Machines">Machines</button>
                     </div>
                     <div class="db-search">
-                        <input type="text" id="db-search-input" placeholder="Search..." oninput="filterDbList()">
+                        <input type="text" id="db-search-input" placeholder="Search..." data-i18n-placeholder="Search..." oninput="filterDbList()">
                     </div>
                     <div id="db-list" class="db-list"></div>
                 </div>
@@ -337,13 +345,13 @@
                 <!-- Main Editor Area -->
                 <div class="db-main" id="db-editor-area">
                     <div class="db-header">
-                        <div class="db-title" id="db-editor-title">Select an Item...</div>
+                        <div class="db-title" id="db-editor-title" data-i18n="Select an Item...">Select an Item...</div>
                         <div class="db-controls">
                             <button class="split-btn btn-inactive-red" onclick="toggleFullSourceMode()"
-                                id="btn-raw-mode" style="border-color:#d32f2f;">Edit Full Source</button>
+                                id="btn-raw-mode" style="border-color:#d32f2f;" data-i18n="Edit Full Source">Edit Full Source</button>
                             <button class="split-btn btn-inactive-red" onclick="reportGithubIssue()"
                                 id="btn-report-issue"
-                                style="display:none; color:white !important; border-color:#d32f2f;">Report
+                                style="display:none; color:white !important; border-color:#d32f2f;" data-i18n="Report Issue">Report
                                 Issue</button>
                         </div>
                     </div>
@@ -352,7 +360,7 @@
                     <div id="visual-editor-wrapper">
                         <div id="db-form-container" class="db-form-container">
                             <!-- Dynamic Form Injected Here -->
-                            <div style="color:#666; font-style:italic; text-align:center; margin-top:50px;">Select
+                            <div style="color:#666; font-style:italic; text-align:center; margin-top:50px;" data-i18n="Select an item from the sidebar to edit.">Select
                                 an
                                 item from the sidebar to edit.</div>
                         </div>
@@ -360,17 +368,17 @@
                         <!-- Snippet Preview -->
                         <div id="snippet-container" style="display:none; margin-top:20px;">
                             <div style="color:#888; font-size:0.85em; margin-bottom:5px; font-family:monospace;">
-                                LIVE
-                                PREVIEW (Source Snippet)</div>
+                                <span data-i18n="LIVE PREVIEW (Source Snippet)">LIVE
+                                PREVIEW (Source Snippet)</span></div>
                             <textarea id="json-snippet" readonly></textarea>
                         </div>
 
                         <div
                             style="margin-top:20px; border-top:1px solid #444; padding-top:15px; display:flex; gap:10px;">
-                            <button class="save-btn" onclick="applyChanges()" style="margin:0;">Apply Changes
+                            <button class="save-btn" onclick="applyChanges()" style="margin:0;" data-i18n="Apply Changes (Local)">Apply Changes
                                 (Local)</button>
                             <button class="info" onclick="exportData()"
-                                style="padding:10px; background:var(--info); border:none; color:white; border-radius:4px; font-weight:bold; cursor:pointer;">Export
+                                style="padding:10px; background:var(--info); border:none; color:white; border-radius:4px; font-weight:bold; cursor:pointer;" data-i18n="Export to File">Export
                                 to File</button>
                         </div>
                     </div>
@@ -379,10 +387,10 @@
                     <div id="full-source-wrapper" style="display:none; height:100%; flex-direction:column;">
                         <textarea id="json-editor"></textarea>
                         <div style="margin-top:10px; display:flex; gap:10px;">
-                            <button class="save-btn" onclick="saveFullSource()" style="margin:0;">Save & Reload
+                            <button class="save-btn" onclick="saveFullSource()" style="margin:0;" data-i18n="Save & Reload DB">Save & Reload
                                 DB</button>
                             <button class="reset-btn" onclick="toggleFullSourceMode()"
-                                style="margin:0; border-color:#aaa; color:#aaa;">Cancel</button>
+                                style="margin:0; border-color:#aaa; color:#aaa;" data-i18n="Cancel">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -392,9 +400,9 @@
         <!-- View: Chain Code Inspector (New) -->
         <div id="view-code" class="view">
             <div style="max-width: 1200px; margin: 0 auto;">
-                <h2 style="color:var(--accent); border-bottom:1px solid #444; padding-bottom:10px;">Production Chain
+                <h2 style="color:var(--accent); border-bottom:1px solid #444; padding-bottom:10px;" data-i18n="Production Chain Code Inspector">Production Chain
                     Code Inspector</h2>
-                <p style="color:#aaa; margin-bottom:20px;">Paste a code, URL, or query string below to inspect the
+                <p style="color:#aaa; margin-bottom:20px;" data-i18n="Paste a code, URL, or query string below to inspect the payload.">Paste a code, URL, or query string below to inspect the
                     payload.</p>
 
                 <div style="display:flex; flex-direction:column; gap:10px;">
@@ -403,10 +411,10 @@
 
                     <div style="display:flex; gap:10px;">
                         <button onclick="inspectCode()"
-                            style="padding: 10px 20px; background: #2e7d32; color: white; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;">Inspect
+                            style="padding: 10px 20px; background: #2e7d32; color: white; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;" data-i18n="Inspect Production Chain Code">Inspect
                             Production Chain Code</button>
                         <button onclick="importCurrentCodeForInspection()"
-                            style="padding: 10px 20px; background: #1976d2; color: white; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;">Import
+                            style="padding: 10px 20px; background: #1976d2; color: white; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;" data-i18n="Import Current Production Chain Code">Import
                             Current Production Chain Code</button>
                     </div>
                 </div>
@@ -418,17 +426,17 @@
                         style="background:#252525; padding:15px; border:1px solid #444; border-radius:4px;">
                         <h3
                             style="margin-top:0; border-bottom:1px solid #444; padding-bottom:10px; color:#aaa; font-size:1em; text-transform:uppercase;">
-                            Raw Compact JSON</h3>
+                            <span data-i18n="Raw Compact JSON">Raw Compact JSON</span></h3>
                         <pre id="inspector-output-raw"
-                            style="background:#1a1a1a; padding:10px; border:1px solid #333; overflow:auto; max-height:600px; color:#bd93f9; font-family:monospace; margin:0;">Waiting for input...</pre>
+                            style="background:#1a1a1a; padding:10px; border:1px solid #333; overflow:auto; max-height:600px; color:#bd93f9; font-family:monospace; margin:0;" data-i18n="Waiting for input...">Waiting for input...</pre>
                     </div>
                     <div class="panel"
                         style="background:#252525; padding:15px; border:1px solid #444; border-radius:4px;">
                         <h3
                             style="margin-top:0; border-bottom:1px solid #444; padding-bottom:10px; color:#aaa; font-size:1em; text-transform:uppercase;">
-                            Translated Verbose JSON</h3>
+                            <span data-i18n="Translated Verbose JSON">Translated Verbose JSON</span></h3>
                         <pre id="inspector-output-trans"
-                            style="background:#1a1a1a; padding:10px; border:1px solid #333; overflow:auto; max-height:600px; color:#bd93f9; font-family:monospace; margin:0;">Waiting for input...</pre>
+                            style="background:#1a1a1a; padding:10px; border:1px solid #333; overflow:auto; max-height:600px; color:#bd93f9; font-family:monospace; margin:0;" data-i18n="Waiting for input...">Waiting for input...</pre>
                     </div>
                 </div>
             </div>

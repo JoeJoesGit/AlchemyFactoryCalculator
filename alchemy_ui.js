@@ -46,6 +46,12 @@ function renderIcon(itemName, extraClass = "") {
     return `<img src="${path}" class="item-icon ${extraClass}" onerror="this.style.display='none'" alt="">`;
 }
 
+function loadBlock(labelKey, heatVal, bioVal) {
+    return `<div class="stat-block"><span class="stat-label">${I18n.t(labelKey)}</span>`
+         + `<span class="stat-value" style="font-size:0.9em; color:var(--fuel);">${I18n.t("Heat:")} ${formatVal(heatVal)} P/s</span>`
+         + `<span class="stat-value" style="font-size:0.9em; color:var(--bio);">${I18n.t("Nutr:")} ${formatVal(bioVal)} V/s</span></div>`;
+}
+
 function init() {
     initHeader(); // Set title and version
 
@@ -292,11 +298,11 @@ function applyChanges() {
     localStorage.setItem("alchemy_source_v1", txt);
 
     initDbEditor();
-    alert("Custom Database Saved! You are now using a local version.");
+    alert(I18n.t("Custom Database Saved! You are now using a local version."));
 }
 
 function resetFactory() {
-    if (confirm("FULL RESET: This will wipe your Settings AND your Custom Database. Continue?")) {
+    if (confirm(I18n.t("FULL RESET: This will wipe your Settings AND your Custom Database. Continue?"))) {
         localStorage.removeItem(SETTINGS_KEY);
         localStorage.removeItem(CUSTOM_DB_KEY);
         localStorage.removeItem("alchemy_source_v1");
@@ -305,14 +311,14 @@ function resetFactory() {
 }
 
 function resetSettings() {
-    if (confirm("Reset Upgrade Levels and Logistics preferences to default? (Recipes will stay)")) {
+    if (confirm(I18n.t("Reset Upgrade Levels and Logistics preferences to default? (Recipes will stay)"))) {
         localStorage.removeItem(SETTINGS_KEY);
         location.reload();
     }
 }
 
 function resetRecipes() {
-    if (confirm("Discard custom recipes and revert to the Official Database?")) {
+    if (confirm(I18n.t("Discard custom recipes and revert to the Official Database?"))) {
         localStorage.removeItem(CUSTOM_DB_KEY);
         localStorage.removeItem("alchemy_source_v1");
         location.reload();
@@ -343,7 +349,7 @@ function renderSlider() {
         let labelHtml = '';
         if (frac.label) {
             if (frac.label === "Full") {
-                labelHtml = `<div class="vertical-frac full-label">Full</div>`;
+                labelHtml = `<div class="vertical-frac full-label">${I18n.t("Full")}</div>`;
             } else if (frac.label.includes("/")) {
                 const [n, d] = frac.label.split("/");
                 labelHtml = `<div class="vertical-frac"><span class="num">${n}</span><span class="sep"></span><span class="den">${d}</span></div>`;
@@ -548,13 +554,13 @@ function initDbEditor() {
 
     // Items
     Object.keys(DB.items).forEach(key => {
-        dbFlatList.push({ type: 'item', key: key, name: key, ...DB.items[key] });
+        dbFlatList.push({ type: 'item', key: key, name: key, displayName: I18n.t(key), ...DB.items[key] });
     });
 
     // Recipes
     DB.recipes.forEach(r => {
         // Main Entry
-        dbFlatList.push({ type: 'recipe', key: r.id, name: r.id, machine: r.machine, ...r });
+        dbFlatList.push({ type: 'recipe', key: r.id, name: r.id, displayName: I18n.t(r.id), machine: r.machine, ...r });
 
         // Virtual Entries for Byproducts
         if (r.outputs) {
@@ -564,6 +570,7 @@ function initDbEditor() {
                         type: 'recipe',
                         key: r.id,          // Points to Parent
                         name: outKey,       // Shows as Byproduct Name
+                        displayName: I18n.t(outKey),
                         machine: r.machine,
                         virtualParent: r.id // Flag for UI
                     });
@@ -575,7 +582,7 @@ function initDbEditor() {
     // Machines
     if (DB.machines) {
         Object.keys(DB.machines).forEach(key => {
-            dbFlatList.push({ type: 'machine', key: key, name: key, ...DB.machines[key] });
+            dbFlatList.push({ type: 'machine', key: key, name: key, displayName: I18n.t(key), ...DB.machines[key] });
         });
     }
 
@@ -604,7 +611,10 @@ function filterDbList() {
 
     const matches = dbFlatList.filter(x => {
         if (currentFilter !== 'all' && x.type !== currentFilter) return false;
-        return x.name.toLowerCase().includes(term) || (x.machine && x.machine.toLowerCase().includes(term));
+        const displayName = (x.displayName || '').toLowerCase();
+        const translatedMachine = x.machine ? I18n.t(x.machine).toLowerCase() : '';
+        return x.name.toLowerCase().includes(term) || displayName.includes(term)
+            || (x.machine && x.machine.toLowerCase().includes(term)) || translatedMachine.includes(term);
     });
 
     matches.forEach(obj => {
@@ -614,21 +624,21 @@ function filterDbList() {
             div.classList.add('selected');
         }
 
-        let typeLabel = obj.type === 'item' ? 'Item' : (obj.type === 'recipe' ? 'Recipe' : 'Machine');
+        let typeLabel = obj.type === 'item' ? I18n.t('Item') : (obj.type === 'recipe' ? I18n.t('Recipe') : I18n.t('Machine'));
         let subText = "";
 
         if (obj.type === 'item') subText = obj.category || '';
-        if (obj.type === 'recipe') subText = obj.machine;
+        if (obj.type === 'recipe') subText = I18n.t(obj.machine);
 
         if (obj.type === 'machine') {
             if (obj.tier !== undefined) {
-                subText = `Tier: ${obj.tier}`;
+                subText = I18n.t("Tier: {tier}", {tier: obj.tier});
             } else {
-                subText = "Tier: ?";
+                subText = I18n.t("Tier: ?");
             }
         }
 
-        div.innerHTML = `<span>${obj.name} <span class="db-subtext">(${subText})</span></span> <span class="db-type-tag ${obj.type}">${typeLabel}</span>`;
+        div.innerHTML = `<span>${I18n.t(obj.name)} <span class="db-subtext">(${subText})</span></span> <span class="db-type-tag ${obj.type}">${typeLabel}</span>`;
         div.onclick = () => selectDbObject(obj.type, obj.key, obj.name);
         listEl.appendChild(div);
     });
@@ -636,12 +646,12 @@ function filterDbList() {
 
 function selectDbObject(type, key, clickedName) {
     currentDbSelection = { type, key, clickedName };
-    document.getElementById('db-editor-title').innerText = key;
+    document.getElementById('db-editor-title').innerText = I18n.t(key);
 
     // Show Report Button
     const reportBtn = document.getElementById('btn-report-issue');
     reportBtn.style.display = 'inline-block';
-    reportBtn.innerText = `Report Issue: ${key}`;
+    reportBtn.innerText = I18n.t("Report Issue: {key}", {key: key});
 
     // Hide Raw Editor if open
     document.getElementById('full-source-wrapper').style.display = 'none';
@@ -682,13 +692,13 @@ function renderDbForm() {
     if (type === 'item') {
         data = DB.items[key];
         let formHtml = `<div class="db-form">`;
-        formHtml += createInput('Category', 'text', data.category, 'category');
-        formHtml += createInput('Buy Price (G)', 'number', data.buyPrice, 'buyPrice');
-        formHtml += createInput('Sell Price (G)', 'number', data.sellPrice, 'sellPrice');
-        formHtml += createInput('Heat Value (P)', 'number', data.heat, 'heat');
-        formHtml += createInput('Nutrient Cost', 'number', data.nutrientCost, 'nutrientCost');
-        formHtml += createInput('Nutrient Value', 'number', data.nutrientValue, 'nutrientValue');
-        formHtml += createInput('Max Fertility', 'number', data.maxFertility, 'maxFertility');
+        formHtml += createInput(I18n.t('Category'), 'text', data.category, 'category');
+        formHtml += createInput(I18n.t('Buy Price (G)'), 'number', data.buyPrice, 'buyPrice');
+        formHtml += createInput(I18n.t('Sell Price (G)'), 'number', data.sellPrice, 'sellPrice');
+        formHtml += createInput(I18n.t('Heat Value (P)'), 'number', data.heat, 'heat');
+        formHtml += createInput(I18n.t('Nutrient Cost'), 'number', data.nutrientCost, 'nutrientCost');
+        formHtml += createInput(I18n.t('Nutrient Value'), 'number', data.nutrientValue, 'nutrientValue');
+        formHtml += createInput(I18n.t('Max Fertility'), 'number', data.maxFertility, 'maxFertility');
         formHtml += `</div>`;
         container.innerHTML = formHtml;
 
@@ -700,15 +710,15 @@ function renderDbForm() {
         if (currentDbSelection.clickedName && currentDbSelection.clickedName !== key) {
             formHtml += `
             <div style="background:var(--bg-panel); border-left:4px solid #fbc02d; padding:10px; margin-bottom:15px; color:#ddd;">
-                <strong>Note:</strong> You selected <em>${currentDbSelection.clickedName}</em>.<br>
-                This allows you to edit the parent recipe: <strong>${key}</strong>.
+                <strong>${I18n.t("Note:")}</strong> ${I18n.t("You selected")} <em>${currentDbSelection.clickedName}</em>.<br>
+                ${I18n.t("This allows you to edit the parent recipe:")} <strong>${key}</strong>.
             </div>`;
         }
 
-        formHtml += createInput('Machine', 'text', data.machine, 'machine');
-        formHtml += createInput('Base Time (sec)', 'number', data.baseTime, 'baseTime');
-        formHtml += `<div class="form-group full-width"><label>Inputs</label><div class="dynamic-list" id="list-inputs"></div></div>`;
-        formHtml += `<div class="form-group full-width"><label>Outputs</label><div class="dynamic-list" id="list-outputs"></div></div>`;
+        formHtml += createInput(I18n.t('Machine'), 'text', data.machine, 'machine');
+        formHtml += createInput(I18n.t('Base Time (sec)'), 'number', data.baseTime, 'baseTime');
+        formHtml += `<div class="form-group full-width"><label>${I18n.t('Inputs')}</label><div class="dynamic-list" id="list-inputs"></div></div>`;
+        formHtml += `<div class="form-group full-width"><label>${I18n.t('Outputs')}</label><div class="dynamic-list" id="list-outputs"></div></div>`;
         formHtml += `</div>`;
         container.innerHTML = formHtml;
         renderDynamicList('inputs', data.inputs);
@@ -719,29 +729,29 @@ function renderDbForm() {
         let formHtml = `<div class="db-form">`;
 
         // --- NEW MACHINE FIELDS ---
-        formHtml += createInput('Research Tier', 'number', data.tier, 'tier');
-        formHtml += createInput('Slots for Stacking', 'number', data.slots, 'slots');
-        formHtml += createInput('Slots Required', 'number', data.slotsRequired, 'slotsRequired');
-        formHtml += createInput('Parent (if module)', 'text', data.parent, 'parent');
+        formHtml += createInput(I18n.t('Research Tier'), 'number', data.tier, 'tier');
+        formHtml += createInput(I18n.t('Slots for Stacking'), 'number', data.slots, 'slots');
+        formHtml += createInput(I18n.t('Slots Required'), 'number', data.slotsRequired, 'slotsRequired');
+        formHtml += createInput(I18n.t('Parent (if module)'), 'text', data.parent, 'parent');
 
         // Size and IO
         formHtml += `<div class="form-group full-width" style="display:flex; gap:10px;">
-                        <div style="flex:1">${createInput('Size X', 'number', data.sizeX, 'sizeX')}</div>
-                        <div style="flex:1">${createInput('Size Y', 'number', data.sizeY, 'sizeY')}</div>
-                        <div style="flex:1">${createInput('Size Z', 'number', data.sizeZ, 'sizeZ')}</div>
+                        <div style="flex:1">${createInput(I18n.t('Size X'), 'number', data.sizeX, 'sizeX')}</div>
+                        <div style="flex:1">${createInput(I18n.t('Size Y'), 'number', data.sizeY, 'sizeY')}</div>
+                        <div style="flex:1">${createInput(I18n.t('Size Z'), 'number', data.sizeZ, 'sizeZ')}</div>
                      </div>`;
 
         formHtml += `<div class="form-group full-width" style="display:flex; gap:10px;">
-                        <div style="flex:1">${createInput('Input Count', 'number', data.inputCount, 'inputCount')}</div>
-                        <div style="flex:1">${createInput('Output Count', 'number', data.outputCount, 'outputCount')}</div>
+                        <div style="flex:1">${createInput(I18n.t('Input Count'), 'number', data.inputCount, 'inputCount')}</div>
+                        <div style="flex:1">${createInput(I18n.t('Output Count'), 'number', data.outputCount, 'outputCount')}</div>
                      </div>`;
 
         // Heat Toggles
-        formHtml += createToggleInput('Heat Cost', data.heatCost, 'heatCost');
-        formHtml += createToggleInput('Heat Gen (Self)', data.heatSelf, 'heatSelf');
+        formHtml += createToggleInput(I18n.t('Heat Cost'), data.heatCost, 'heatCost');
+        formHtml += createToggleInput(I18n.t('Heat Gen (Self)'), data.heatSelf, 'heatSelf');
 
         // Build Cost List
-        formHtml += `<div class="form-group full-width"><label>Build Cost</label><div class="dynamic-list" id="list-buildCost"></div></div>`;
+        formHtml += `<div class="form-group full-width"><label>${I18n.t('Build Cost')}</label><div class="dynamic-list" id="list-buildCost"></div></div>`;
         formHtml += `</div>`;
         container.innerHTML = formHtml;
         renderDynamicList('buildCost', data.buildCost);
@@ -843,7 +853,7 @@ function renderDynamicList(field, obj) {
 
     const addBtn = document.createElement('button');
     addBtn.className = 'btn-add';
-    addBtn.innerText = '+ Add Item';
+    addBtn.innerText = I18n.t('+ Add Item');
     addBtn.onclick = () => addDynamicItem(field);
     container.appendChild(addBtn);
 }
@@ -871,12 +881,14 @@ function filterRowCombo(input) {
     list.innerHTML = '';
     list.style.display = 'block';
 
-    let matches = allItemsList.filter(i => i.name.toLowerCase().includes(filter));
+    let matches = allItemsList.filter(i =>
+        i.name.toLowerCase().includes(filter) || (i.displayName || '').toLowerCase().includes(filter)
+    );
 
     // Sort smart: Starts With first
     matches.sort((a, b) => {
-        const aStarts = a.name.toLowerCase().startsWith(filter);
-        const bStarts = b.name.toLowerCase().startsWith(filter);
+        const aStarts = a.name.toLowerCase().startsWith(filter) || (a.displayName || '').toLowerCase().startsWith(filter);
+        const bStarts = b.name.toLowerCase().startsWith(filter) || (b.displayName || '').toLowerCase().startsWith(filter);
         if (aStarts && !bStarts) return -1;
         if (!aStarts && bStarts) return 1;
         return a.name.localeCompare(b.name);
@@ -885,7 +897,7 @@ function filterRowCombo(input) {
     if (matches.length === 0) {
         const empty = document.createElement('div');
         empty.className = 'combo-item';
-        empty.innerText = "No matches";
+        empty.innerText = I18n.t("No matches");
         empty.style.color = "#999";
         list.appendChild(empty);
     }
@@ -894,7 +906,7 @@ function filterRowCombo(input) {
         const div = document.createElement('div');
         div.className = 'combo-item';
         // ICON INJECTION
-        div.innerHTML = `<span>${renderIcon(match.name)} ${match.name}</span> <span class="combo-cat">${match.category}</span>`;
+        div.innerHTML = `<span>${renderItem(match.name)}</span> <span class="combo-cat">${I18n.t(match.category)}</span>`;
         // Pass current value (item key) to replace
         // Note: We need the field name and old key. 
         // We can grab the old key from the input's default value or attribute? 
@@ -920,7 +932,7 @@ function validateAndSetKey(field, oldKey, inputElem) {
     const newKey = inputElem.value;
     // Check against DB items
     if (!DB.items[newKey] && newKey !== "New Item") {
-        alert("Invalid Item! Please select a valid item from the list.");
+        alert(I18n.t("Invalid Item! Please select a valid item from the list."));
         inputElem.value = oldKey; // Revert
         return;
     }
@@ -996,7 +1008,7 @@ function toggleFullSourceMode() {
         sourceWrapper.style.display = 'flex';
         btnRaw.style.display = 'none'; // Hide button inside logic, show cancel instead
         btnReport.style.display = 'none';
-        title.innerText = "Editing Full Database Source";
+        title.innerText = I18n.t("Editing Full Database Source");
 
         // Populate text area
         document.getElementById('json-editor').value = `window.ALCHEMY_DB = ${JSON.stringify(DB, null, 4)};`;
@@ -1007,8 +1019,8 @@ function toggleFullSourceMode() {
         sourceWrapper.style.display = 'none';
         visualWrapper.style.display = 'block';
         btnRaw.style.display = 'inline-block';
-        title.innerText = "Select an Item...";
-        document.getElementById('db-form-container').innerHTML = `<div style="color:#666; font-style:italic; text-align:center; margin-top:50px;">Select an item from the sidebar to edit.</div>`;
+        title.innerText = I18n.t("Select an Item...");
+        document.getElementById('db-form-container').innerHTML = `<div style="color:#666; font-style:italic; text-align:center; margin-top:50px;">${I18n.t("Select an item from the sidebar to edit.")}</div>`;
         document.getElementById('snippet-container').style.display = 'none';
     }
 }
@@ -1026,7 +1038,7 @@ function saveFullSource() {
         } else {
             throw new Error("Missing 'window.ALCHEMY_DB =' assignment.");
         }
-    } catch (e) { alert("Syntax Error: " + e.message); }
+    } catch (e) { alert(I18n.t("Syntax Error: {message}", {message: e.message})); }
 }
 
 function generateDbString() {
@@ -1065,7 +1077,7 @@ function exportData() {
 
 function saveSettings() {
     persist();
-    alert("Settings Saved!");
+    alert(I18n.t("Settings Saved!"));
 }
 
 /* ==========================================================================
@@ -1075,7 +1087,7 @@ function prepareComboboxData() {
     const allItems = new Set(Object.keys(DB.items || {}));
     if (DB.recipes) DB.recipes.forEach(r => Object.keys(r.outputs).forEach(k => allItems.add(k)));
     allItemsList = Array.from(allItems).sort().map(name => {
-        return { name: name, category: (DB.items[name] ? DB.items[name].category : "Other") };
+        return { name: name, displayName: I18n.t(name), category: (DB.items[name] ? DB.items[name].category : "Other") };
     });
 }
 function toggleCombobox() {
@@ -1102,26 +1114,33 @@ function filterCombobox() {
     const ghost = document.getElementById('ghost-text');
     list.innerHTML = ''; list.style.display = 'block';
     updateComboIcon();
-    let matches = allItemsList.filter(item => item.name.toLowerCase().includes(filter));
+    let matches = allItemsList.filter(item =>
+        item.name.toLowerCase().includes(filter) || (item.displayName || '').toLowerCase().includes(filter)
+    );
     matches.sort((a, b) => {
-        const aStarts = a.name.toLowerCase().startsWith(filter);
-        const bStarts = b.name.toLowerCase().startsWith(filter);
+        const aStarts = a.name.toLowerCase().startsWith(filter) || (a.displayName || '').toLowerCase().startsWith(filter);
+        const bStarts = b.name.toLowerCase().startsWith(filter) || (b.displayName || '').toLowerCase().startsWith(filter);
         if (aStarts && !bStarts) return -1;
         if (!aStarts && bStarts) return 1;
         return a.name.localeCompare(b.name);
     });
     matches.forEach((item) => {
         const div = document.createElement('div'); div.className = 'combo-item';
-        div.innerHTML = `<span>${item.name}</span> <span class="combo-cat">${item.category}</span>`;
+        div.innerHTML = `<span>${I18n.t(item.name)}</span> <span class="combo-cat">${I18n.t(item.category)}</span>`;
         div.onclick = function () { selectItem(item.name); };
         list.appendChild(div);
     });
     if (filter.length > 0 && matches.length > 0) {
-        const topMatch = matches[0].name;
-        if (topMatch.toLowerCase().startsWith(filter)) {
-            const ghostSuffix = topMatch.substring(filter.length);
-            ghost.innerText = input.value + ghostSuffix;
-        } else { ghost.innerText = ""; }
+        const top = matches[0];
+        const nameLower = top.name.toLowerCase();
+        const displayLower = (top.displayName || '').toLowerCase();
+        if (nameLower.startsWith(filter)) {
+            ghost.innerText = input.value + top.name.substring(filter.length);
+        } else if (displayLower.startsWith(filter)) {
+            ghost.innerText = input.value + top.displayName.substring(filter.length);
+        } else {
+            ghost.innerText = "";
+        }
     } else { ghost.innerText = ""; }
 }
 function handleComboKey(e) {
@@ -1173,32 +1192,30 @@ function populateSelects() {
         if (itemDef.heat) fuels.push({ name: itemName, heat: itemDef.heat });
         if (itemDef.nutrientValue) ferts.push({ name: itemName, val: itemDef.nutrientValue });
     });
-    fuels.sort((a, b) => b.heat - a.heat).forEach(f => { fuelSel.appendChild(new Option(`${f.name} (${f.heat} P)`, f.name)); });
-    ferts.sort((a, b) => b.val - a.val).forEach(f => { fertSel.appendChild(new Option(`${f.name} (${f.val} V)`, f.name)); });
+    fuels.sort((a, b) => b.heat - a.heat).forEach(f => { fuelSel.appendChild(new Option(`${I18n.t(f.name)} (${f.heat} P)`, f.name)); });
+    ferts.sort((a, b) => b.val - a.val).forEach(f => { fertSel.appendChild(new Option(`${I18n.t(f.name)} (${f.val} V)`, f.name)); });
 }
 function toggleFuel() {
-    const btn = document.getElementById('btnSelfFuel'); const chk = document.getElementById('selfFeed');
+    const chk = document.getElementById('selfFeed');
     chk.checked = !chk.checked;
-    if (chk.checked) { btn.innerText = "Self-Fuel: ON"; btn.classList.remove('btn-inactive-red'); btn.classList.add('btn-active-green'); }
-    else { btn.innerText = "Self-Fuel: OFF"; btn.classList.remove('btn-active-green'); btn.classList.add('btn-inactive-red'); }
+    updateToggleButtonUI('btnSelfFuel', chk.checked, "Self-Fuel");
     calculate();
 }
 function toggleFert() {
-    const btn = document.getElementById('btnSelfFert'); const chk = document.getElementById('selfFert');
+    const chk = document.getElementById('selfFert');
     chk.checked = !chk.checked;
-    if (chk.checked) { btn.innerText = "Self-Fert: ON"; btn.classList.remove('btn-inactive-red'); btn.classList.add('btn-active-green'); }
-    else { btn.innerText = "Self-Fert: OFF"; btn.classList.remove('btn-active-green'); btn.classList.add('btn-inactive-red'); }
+    updateToggleButtonUI('btnSelfFert', chk.checked, "Self-Fert");
     calculate();
 }
-function setDefaultFuel() { const c = document.getElementById('fuelSelect').value; DB.settings.defaultFuel = c; persist(); updateDefaultButtonState(); alert("Default Fuel Saved: " + c); }
-function setDefaultFert() { const c = document.getElementById('fertSelect').value; DB.settings.defaultFert = c; persist(); updateDefaultButtonState(); alert("Default Fertilizer Saved: " + c); }
+function setDefaultFuel() { const c = document.getElementById('fuelSelect').value; DB.settings.defaultFuel = c; persist(); updateDefaultButtonState(); alert(I18n.t("Default Fuel Saved: {name}", {name: I18n.t(c)})); }
+function setDefaultFert() { const c = document.getElementById('fertSelect').value; DB.settings.defaultFert = c; persist(); updateDefaultButtonState(); alert(I18n.t("Default Fertilizer Saved: {name}", {name: I18n.t(c)})); }
 function updateDefaultButtonState() {
     const curFuel = document.getElementById('fuelSelect').value; const defFuel = DB.settings.defaultFuel;
     const btnFuel = document.getElementById('btnDefFuel');
-    if (curFuel === defFuel) { btnFuel.disabled = true; btnFuel.innerText = "Current Default"; } else { btnFuel.disabled = false; btnFuel.innerText = "Make Default"; }
+    if (curFuel === defFuel) { btnFuel.disabled = true; btnFuel.innerText = I18n.t("Current Default"); } else { btnFuel.disabled = false; btnFuel.innerText = I18n.t("Make Default"); }
     const curFert = document.getElementById('fertSelect').value; const defFert = DB.settings.defaultFert;
     const btnFert = document.getElementById('btnDefFert');
-    if (curFert === defFert) { btnFert.disabled = true; btnFert.innerText = "Current Default"; } else { btnFert.disabled = false; btnFert.innerText = "Make Default"; }
+    if (curFert === defFert) { btnFert.disabled = true; btnFert.innerText = I18n.t("Current Default"); } else { btnFert.disabled = false; btnFert.innerText = I18n.t("Make Default"); }
 }
 
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -1215,7 +1232,7 @@ function openRecipeModal(item, domElement) {
     const candidates = getRecipesFor(item);
     const list = document.getElementById('recipe-list');
     list.innerHTML = '';
-    document.getElementById('recipe-modal-title').innerHTML = `Select Recipe for ${renderIcon(item)} ${item}`;
+    document.getElementById('recipe-modal-title').innerHTML = `${I18n.t("Select Recipe for")} ${renderItem(item)}`;
     const currentId = (getActiveRecipe(item) || {}).id;
     let ancestors = [];
     if (domElement && domElement.dataset.ancestors) {
@@ -1230,17 +1247,17 @@ function openRecipeModal(item, domElement) {
         // We verify if this recipe would cause a dependency loop back to 'item' (or ancestors)
         const loopResult = checkLoopParams(r, item, ancestors);
 
-        let inputs = []; Object.keys(r.inputs).forEach(key => { inputs.push(`${r.inputs[key]}x ${renderIcon(key)} ${key}`); });
-        let outputs = []; Object.keys(r.outputs).forEach(key => { outputs.push(`${r.outputs[key]}x ${renderIcon(key)} ${key}`); });
+        let inputs = []; Object.keys(r.inputs).forEach(key => { inputs.push(`${r.inputs[key]}x ${renderItem(key)}`); });
+        let outputs = []; Object.keys(r.outputs).forEach(key => { outputs.push(`${r.outputs[key]}x ${renderItem(key)}`); });
 
         let content = `
-            <div class="recipe-header"><strong>${r.machine}</strong> <span style="font-size:0.9em; opacity:0.8;">(${r.baseTime}s)</span>${r.id === currentId ? '✅' : ''}</div>
-            <div class="recipe-details">Input: ${inputs.join(', ')}<br>Yields: ${outputs.join(', ')}</div>
+            <div class="recipe-header"><strong>${I18n.t(r.machine)}</strong> <span style="font-size:0.9em; opacity:0.8;">(${r.baseTime}s)</span>${r.id === currentId ? '✅' : ''}</div>
+            <div class="recipe-details">${I18n.t("Input:")} ${inputs.join(', ')}<br>${I18n.t("Yields:")} ${outputs.join(', ')}</div>
         `;
 
         if (loopResult.isLoop) {
             div.classList.add("disabled");
-            content += `<div class="loop-warning">⚠️ Creates Infinite Loop with ${loopResult.conflict}</div>`;
+            content += `<div class="loop-warning">⚠️ ${I18n.t("Creates Infinite Loop with")} ${loopResult.conflict}</div>`;
             div.onclick = null; // STRICTLY BLOCK CLICK
         } else {
             div.onclick = () => {
@@ -1284,7 +1301,7 @@ function executeWithFailsafe(actionFn) {
         importStateToUI(snapshot);
 
         // 5. Notify User
-        alert("Action Reverted: Infinite Loop Detected!\n\nThe change you attempted caused a circular dependency that would crash the calculator. The state has been restored.");
+        alert(I18n.t("Action Reverted: Infinite Loop Detected!\n\nThe change you attempted caused a circular dependency that would crash the calculator. The state has been restored."));
     }
 }
 
@@ -1316,7 +1333,7 @@ function checkLoopParams(candidateRecipe, targetItem, ancestors) {
     let iterations = 0;
     while (stack.length > 0) {
         iterations++;
-        if (iterations > 500) return { isLoop: true, conflict: "Deep Recursion Limit" }; // Safety break
+        if (iterations > 500) return { isLoop: true, conflict: I18n.t("Deep Recursion Limit") }; // Safety break
 
         const current = stack.pop();
         if (visited.has(current)) continue;
@@ -1415,7 +1432,7 @@ function updateConstructionList(machineStats, furnaceSlotDemand, activeSeedDeman
         if (totalMax <= 0) return;
 
         // Header
-        let label = (totalMax === totalMin) ? `${totalMax}` : `<span style="font-size:0.9em">Min ${totalMin}, Max ${totalMax}</span>`;
+        let label = (totalMax === totalMin) ? `${totalMax}` : `<span style="font-size:0.9em">${I18n.t("Min {totalMin}, Max {totalMax}", {totalMin: totalMin, totalMax: totalMax})}</span>`;
 
         // Highlighting Logic for Header
         // Sanitize machine name for selector
@@ -1430,11 +1447,11 @@ function updateConstructionList(machineStats, furnaceSlotDemand, activeSeedDeman
             // Highlight specific machine+item
             const rowHover = `onmouseover="highlightNodes('[data-machine=\\'${machAttr}\\'][data-item=\\'${itemAttr}\\']')" onmouseout="highlightNodes(null)"`;
             // ICON INJECTION
-            subListHtml += `<li class="build-subitem" ${rowHover}><span>${renderIcon(sub.item)} ${sub.item}</span> <span class="build-val">${sub.count}</span></li>`;
+            subListHtml += `<li class="build-subitem" ${rowHover}><span>${renderItem(sub.item)}</span> <span class="build-val">${sub.count}</span></li>`;
         });
         subListHtml += `</ul>`;
 
-        li.innerHTML = `<div class="build-header" onclick="toggleBuildGroup(this.parentNode)" ${headerHover}><span><span class="build-arrow">▶</span> ${m}</span> <span class="build-count">${label}</span></div>${subListHtml}`;
+        li.innerHTML = `<div class="build-header" onclick="toggleBuildGroup(this.parentNode)" ${headerHover}><span><span class="build-arrow">▶</span> ${I18n.t(m)}</span> <span class="build-count">${label}</span></div>${subListHtml}`;
         buildList.appendChild(li);
     });
 
@@ -1492,11 +1509,11 @@ function updateConstructionList(machineStats, furnaceSlotDemand, activeSeedDeman
                 const machineFurnaces = Math.ceil((sub.slots - 0.0001) / capacity);
                 const subSelector = `[data-machine='${sub.machine.replace(/'/g, "")}']`;
                 const rowHover = `onmouseover="highlightNodes(\`${subSelector}\`)" onmouseout="highlightNodes(null)"`;
-                subListHtml += `<li class="build-subitem" ${rowHover}><span>${sub.machine}</span> <span class="build-val">${machineFurnaces}</span></li>`;
+                subListHtml += `<li class="build-subitem" ${rowHover}><span>${I18n.t(sub.machine)}</span> <span class="build-val">${machineFurnaces}</span></li>`;
             });
             subListHtml += `</ul>`;
 
-            li.innerHTML = `<div class="build-header" style="border-top:1px dashed #555" onclick="toggleBuildGroup(this.parentNode)" ${headerHover}><span><span class="build-arrow">▶</span> ${renderIcon(parentName)} ${parentName} (Min)</span> <span class="build-count" style="color:var(--warn)">${totalFurnacesCalc}</span></div>${subListHtml}`;
+            li.innerHTML = `<div class="build-header" style="border-top:1px dashed #555" onclick="toggleBuildGroup(this.parentNode)" ${headerHover}><span><span class="build-arrow">▶</span> ${renderItem(parentName)} ${I18n.t("(Min)")}</span> <span class="build-count" style="color:var(--warn)">${totalFurnacesCalc}</span></div>${subListHtml}`;
             buildList.appendChild(li);
         }
     });
@@ -1520,7 +1537,7 @@ function updateConstructionList(machineStats, furnaceSlotDemand, activeSeedDeman
             // For now, no specific highlight or highlight all Nurseries.
             const rowHover = `onmouseover="highlightNodes('[data-machine=\\'Nursery\\']')" onmouseout="highlightNodes(null)"`;
 
-            seedListHtml += `<li class="build-subitem" ${rowHover}><span>${renderIcon(seedName)} ${seedName}</span> <span class="build-val">${count}</span></li>`;
+            seedListHtml += `<li class="build-subitem" ${rowHover}><span>${renderItem(seedName)}</span> <span class="build-val">${count}</span></li>`;
         });
         seedListHtml += `</ul>`;
 
@@ -1528,14 +1545,14 @@ function updateConstructionList(machineStats, furnaceSlotDemand, activeSeedDeman
         // Header Highlight: Highlight all Nurseries
         const headerHover = `onmouseover="highlightNodes('[data-machine=\\'Nursery\\']')" onmouseout="highlightNodes(null)"`;
 
-        li.innerHTML = `<div class="build-header" style="border-top:1px dashed #555" onclick="toggleBuildGroup(this.parentNode)" ${headerHover}><span><span class="build-arrow">▶</span> Required Seeds</span> <span class="build-count" style="color:var(--bio)">${totalSeeds}</span></div>${seedListHtml}`;
+        li.innerHTML = `<div class="build-header" style="border-top:1px dashed #555" onclick="toggleBuildGroup(this.parentNode)" ${headerHover}><span><span class="build-arrow">▶</span> ${I18n.t("Required Seeds")}</span> <span class="build-count" style="color:var(--bio)">${totalSeeds}</span></div>${seedListHtml}`;
         buildList.appendChild(li);
     }
 
     if (Object.keys(totalConstructionMaterials).length > 0) {
-        let totalHtml = `<div class="total-mats-header">Total Materials Required (Minimum)</div>`;
+        let totalHtml = `<div class="total-mats-header">${I18n.t("Total Materials Required (Minimum)")}</div>`;
         Object.keys(totalConstructionMaterials).sort().forEach(mat => {
-            totalHtml += `<div class="total-mat-item"><span>${renderIcon(mat)} ${mat}</span> <strong>${totalConstructionMaterials[mat]}</strong></div>`;
+            totalHtml += `<div class="total-mat-item"><span>${renderItem(mat)}</span> <strong>${totalConstructionMaterials[mat]}</strong></div>`;
         });
         totalMatsContainer.innerHTML = totalHtml;
     }
@@ -1555,7 +1572,7 @@ function formatCurrency(copperVal) {
     if (silver > 0) html += `<span class="curr-s">${silver}s</span> `;
     if (copper > 0 || html === "") html += `<span class="curr-c">${copper}c</span>`;
 
-    return html.trim() + (copperVal < 0 ? " (Loss)" : "");
+    return html.trim() + (copperVal < 0 ? " " + I18n.t("(Loss)") : "");
 }
 
 function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualFertNeed) {
@@ -1570,21 +1587,21 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
         const revenuePerMin = p.targetRate * targetItemDef.sellPrice;
         const profit = revenuePerMin - cost;
         // Use formatCurrency for profit
-        profitHtml = `<div class="stat-block"><span class="stat-label">Projected Profit</span><span class="stat-value gold-profit" style="font-size:1.5em; margin-top:6px;">${formatCurrency(profit)} /m</span></div>`;
+        profitHtml = `<div class="stat-block"><span class="stat-label">${I18n.t("Projected Profit")}</span><span class="stat-value gold-profit" style="font-size:1.5em; margin-top:6px;">${formatCurrency(profit)} /m</span></div>`;
     } else {
         // Use formatCurrency for cost
-        profitHtml = `<div class="stat-block"><span class="stat-label">Total Raw Cost</span><span class="stat-value gold-cost" style="font-size:1.5em; margin-top:6px;">${formatCurrency(cost)} /m</span></div>`;
+        profitHtml = `<div class="stat-block"><span class="stat-label">${I18n.t("Total Raw Cost")}</span><span class="stat-value gold-cost" style="font-size:1.5em; margin-top:6px;">${formatCurrency(cost)} /m</span></div>`;
     }
     let deductionText = [];
     if (p.selfFeed && p.targetItem === p.selectedFuel) {
         let gross = p.targetRate + actualFuelNeed;
-        deductionText.push(`Gross: ${gross.toFixed(2)}`);
-        deductionText.push(`Use: ${actualFuelNeed.toFixed(2)}`);
+        deductionText.push(`${I18n.t("Gross:")} ${gross.toFixed(2)}`);
+        deductionText.push(`${I18n.t("Use:")} ${actualFuelNeed.toFixed(2)}`);
     }
     if (p.selfFert && p.targetItem === p.selectedFert) {
         let gross = p.targetRate + actualFertNeed;
-        deductionText.push(`Gross: ${gross.toFixed(2)}`);
-        deductionText.push(`Use: ${actualFertNeed.toFixed(2)}`);
+        deductionText.push(`${I18n.t("Gross:")} ${gross.toFixed(2)}`);
+        deductionText.push(`${I18n.t("Use:")} ${actualFertNeed.toFixed(2)}`);
     }
 
     // Share Box HTML (Integrated)
@@ -1592,26 +1609,26 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
     const btnState = hasTarget ? "" : "disabled style='opacity:0.5; cursor:not-allowed;'";
     const shareHtml = `
         <div class="share-row" style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center; margin-top:10px; padding-top:10px; border-top:1px dashed #444;">
-             <input type="text" id="share-code-display" readonly value="${hasTarget ? 'Generating...' : 'Select an item to generate code'}" onclick="this.select()" class="code-display-input" style="font-size:0.8em; color:#666;" title="Production Chain code for current state of calculator. Can be used to share with others to replicate this production chain precisely">
+             <input type="text" id="share-code-display" readonly data-state="${hasTarget ? 'generating' : 'idle'}" value="${hasTarget ? I18n.t('Generating...') : I18n.t('Select an item to generate code')}" onclick="this.select()" class="code-display-input" style="font-size:0.8em; color:#666;" title="Production Chain code for current state of calculator. Can be used to share with others to replicate this production chain precisely">
              <button class="icon-btn" onclick="copyCodeToClipboard()" ${btnState}>
                  📋 Code
                  <div class="tooltip-box">
-                    <div class="tooltip-header">Copy Code</div>
-                    <div style="color:#ccc;">Copies the compressed Production Chain Code to your clipboard. Share this code to replicate your setup.</div>
+                    <div class="tooltip-header">${I18n.t("Copy Code")}</div>
+                    <div style="color:#ccc;">${I18n.t("Copies the compressed Production Chain Code to your clipboard. Share this code to replicate your setup.")}</div>
                  </div>
              </button>
              <button class="icon-btn" onclick="copyLinkToClipboard()" ${btnState}>
                  🔗 Link
                  <div class="tooltip-box">
-                    <div class="tooltip-header">Copy Direct Link</div>
-                    <div style="color:#ccc;">Copies a URL to your clipboard containing the full Production Chain configuration.</div>
+                    <div class="tooltip-header">${I18n.t("Copy Direct Link")}</div>
+                    <div style="color:#ccc;">${I18n.t("Copies a URL to your clipboard containing the full Production Chain configuration.")}</div>
                  </div>
              </button>
              <button class="icon-btn" onclick="openImportModal()">
-                 📥 Import
+                 📥 ${I18n.t("Import")}
                  <div class="tooltip-box">
-                    <div class="tooltip-header">Import Chain</div>
-                    <div style="color:#ccc;">Input a Code or URL to load a shared Production Chain configuration.</div>
+                    <div class="tooltip-header">${I18n.t("Import Chain")}</div>
+                    <div style="color:#ccc;">${I18n.t("Input a Code or URL to load a shared Production Chain configuration.")}</div>
                  </div>
              </button>
         </div>
@@ -1619,16 +1636,16 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
 
     // Belt Usage Logic
     const beltUsageHtml = isLiquid
-        ? `<span class="stat-value" style="font-size:1.1em; color:#aaa;">N/A</span><span class="stat-sub">Liquid/Gas</span>`
-        : `<span class="stat-value" style="font-size:1.1em; color:${p.targetRate > p.beltSpeed ? '#ff5252' : '#aaa'};">${(p.targetRate / p.beltSpeed * 100).toFixed(0)}%</span><span class="stat-sub">Cap: ${p.beltSpeed}/m</span>`;
+        ? `<span class="stat-value" style="font-size:1.1em; color:#aaa;">${I18n.t("N/A")}</span><span class="stat-sub">${I18n.t("Liquid/Gas")}</span>`
+        : `<span class="stat-value" style="font-size:1.1em; color:${p.targetRate > p.beltSpeed ? '#ff5252' : '#aaa'};">${(p.targetRate / p.beltSpeed * 100).toFixed(0)}%</span><span class="stat-sub">${I18n.t("Cap:")} ${p.beltSpeed}/m</span>`;
 
     document.getElementById('summary-container').innerHTML = `
         <div class="summary-box">
-            <div class="stat-block"><span class="stat-label">Net Output</span><span class="stat-value ${p.targetRate >= 0 ? 'net-positive' : 'net-warning'}" style="font-size:1.5em">${renderIcon(p.targetItem)} ${formatVal(p.targetRate)} / min</span>${deductionText.length > 0 ? `<span class=\"stat-sub\" style=\"font-size:0.75em\">${deductionText.join('<br>')}</span>` : ''}</div>
-            <div class="stat-block"><span class="stat-label">Internal Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: ${formatVal(internalHeat)} P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: ${formatVal(internalBio)} V/s</span></div>
-            <div class="stat-block"><span class="stat-label">External Load</span><span class="stat-value" style="font-size:0.9em; color:var(--fuel);">Heat: ${formatVal(externalHeat)} P/s</span><span class="stat-value" style="font-size:0.9em; color:var(--bio);">Nutr: ${formatVal(externalBio)} V/s</span></div>
+            <div class="stat-block"><span class="stat-label">${I18n.t("Net Output")}</span><span class="stat-value ${p.targetRate >= 0 ? 'net-positive' : 'net-warning'}" style="font-size:1.5em">${renderIcon(p.targetItem)} ${formatVal(p.targetRate)} / min</span>${deductionText.length > 0 ? `<span class=\"stat-sub\" style=\"font-size:0.75em\">${deductionText.join('<br>')}</span>` : ''}</div>
+            ${loadBlock("Internal Load", internalHeat, internalBio)}
+            ${loadBlock("External Load", externalHeat, externalBio)}
             ${profitHtml}
-            <div class="stat-block"><span class="stat-label">Belt Usage (Net)</span>${beltUsageHtml}</div>
+            <div class="stat-block"><span class="stat-label">${I18n.t("Belt Usage (Net)")}</span>${beltUsageHtml}</div>
             ${shareHtml}
         </div>`;
 
@@ -1638,6 +1655,7 @@ function updateSummaryBox(p, heat, bio, cost, grossRate, actualFuelNeed, actualF
         if (el) {
             el.value = code;
             el.style.color = 'var(--info)';
+            el.dataset.state = 'ready';
         }
     }).catch(err => console.warn("Auto-gen code failed", err));
 }
@@ -1711,15 +1729,30 @@ function updateUpgradeSummary() {
 
     const summaryEl = document.getElementById('upgradeSummary');
     if (summaryEl) {
-        summaryEl.innerText = `Belt:${belt} Speed:${speed} Alc:${alc} Fuel:${fuel} Fert:${fert}`;
+        summaryEl.innerText = `${I18n.t("Belt:")}${belt} ${I18n.t("Speed:")}${speed} ${I18n.t("Alc:")}${alc} ${I18n.t("Fuel:")}${fuel} ${I18n.t("Fert:")}${fert}`;
     }
 }
 
-window.onload = function () {
+window.onload = async function () {
     init();
+    await I18n.init();
+    if (I18n.getLang() !== 'en') {
+        renderAll();
+    }
     restoreStaticSectionStates();
     updateUpgradeSummary();
 };
+
+function renderAll() {
+    I18n.applyStaticTranslations();
+    prepareComboboxData();
+    populateSelects();
+    loadSettingsToUI();
+    renderSlider();
+    calculate();
+    updateUpgradeSummary();
+    if (typeof initDbEditor === 'function') initDbEditor();
+}
 
 /* ==========================================================================
    SECTION: IMPORT / EXPORT / SERIALIZATION
@@ -1901,13 +1934,13 @@ async function importStateToUI(inputStr) {
         const jsonStr = await decompressData(code);
         state = JSON.parse(jsonStr);
     } catch (e) {
-        alert("The provided Production Chain Code is invalid or corrupted. Loading default session.");
+        alert(I18n.t("The provided Production Chain Code is invalid or corrupted. Loading default session."));
         console.error("Import Error", e);
         return; // Stop processing
     }
 
     if (!state || typeof state !== 'object') {
-        alert("Invalid Code Structure.");
+        alert(I18n.t("Invalid Code Structure."));
         return;
     }
 
@@ -2039,7 +2072,7 @@ async function importStateToUI(inputStr) {
             const match = allItemsList.find(i => i.name.toLowerCase() === tItem.toLowerCase());
             if (match) {
                 document.getElementById('targetItemInput').value = match.name;
-                document.getElementById('target-btn-text').innerHTML = `${renderIcon(match.name)} ${match.name}`;
+                document.getElementById('target-btn-text').innerHTML = renderItem(match.name);
 
                 document.getElementById('targetRate').value = state.target.rate || 60;
                 document.getElementById('targetRate').disabled = false;
@@ -2065,7 +2098,7 @@ async function importStateToUI(inputStr) {
 
     } catch (e) {
         console.error("Error applying state:", e);
-        alert("An error occurred while applying the code. Some settings may be partial.");
+        alert(I18n.t("An error occurred while applying the code. Some settings may be partial."));
     } finally {
         // Step G: Release Reset Block
         // We keep it suppressed for the FINAL calculation to avoid the logic inside calculate() 
@@ -2089,12 +2122,14 @@ async function importStateToUI(inputStr) {
 function updateToggleButtonUI(btnId, isChecked, labelPrefix) {
     const btn = document.getElementById(btnId);
     if (!btn) return;
+    const onKey = `${labelPrefix}: ON`;
+    const offKey = `${labelPrefix}: OFF`;
     if (isChecked) {
-        btn.innerText = `${labelPrefix}: ON`;
+        btn.innerText = I18n.t(onKey);
         btn.classList.remove('btn-inactive-red');
         btn.classList.add('btn-active-green');
     } else {
-        btn.innerText = `${labelPrefix}: OFF`;
+        btn.innerText = I18n.t(offKey);
         btn.classList.remove('btn-active-green');
         btn.classList.add('btn-inactive-red');
     }
@@ -2117,14 +2152,14 @@ async function handleImportSubmit() {
 async function copyCodeToClipboard() {
     // Code is already in the input box, just copy it
     const display = document.getElementById('share-code-display');
-    if (!display || display.value === "Generating...") {
+    if (!display || display.dataset.state !== 'ready') {
         // Fallback or force gen
         const code = await exportStateFromUI();
         await navigator.clipboard.writeText(code);
     } else {
         await navigator.clipboard.writeText(display.value);
     }
-    alert("Code copied!");
+    alert(I18n.t("Code copied!"));
 }
 
 async function copyLinkToClipboard() {
@@ -2133,10 +2168,10 @@ async function copyLinkToClipboard() {
         const code = await exportStateFromUI();
         const url = `${window.location.origin}${window.location.pathname}?code=${encodeURIComponent(code)}`;
         await navigator.clipboard.writeText(url);
-        alert("Link copied!");
+        alert(I18n.t("Link copied!"));
     } catch (e) {
         console.error(e);
-        alert("Failed to generate link.");
+        alert(I18n.t("Failed to generate link."));
     }
 }
 
@@ -2150,7 +2185,7 @@ function importCurrentCodeForInspection() {
         inspectCode();
     }).catch(err => {
         console.error("Failed to generate code for inspection", err);
-        alert("Error generating code: " + err.message);
+        alert(I18n.t("Error generating code: {message}", {message: err.message}));
     });
 }
 
@@ -2160,8 +2195,8 @@ async function inspectCode() {
     const outTrans = document.getElementById('inspector-output-trans');
     const errBox = document.getElementById('inspector-error');
 
-    outRaw.textContent = "Processing...";
-    outTrans.textContent = "Processing...";
+    outRaw.textContent = I18n.t("Processing...");
+    outTrans.textContent = I18n.t("Processing...");
     errBox.textContent = "";
 
     try {
@@ -2212,7 +2247,7 @@ async function inspectCode() {
             const response = await new Response(stream);
             jsonStr = await response.text();
         } catch (e) {
-            throw new Error("Decompression Failed. Invalid Base64 or Gzip data.");
+            throw new Error(I18n.t("Decompression Failed. Invalid Base64 or Gzip data."));
         }
 
         // 4. PARSE RAW JSON
@@ -2224,7 +2259,7 @@ async function inspectCode() {
         outTrans.textContent = JSON.stringify(translated, null, 2);
 
     } catch (e) {
-        errBox.textContent = "Error: " + e.message;
+        errBox.textContent = I18n.t("Error: {message}", {message: e.message});
         outRaw.textContent = "---";
         outTrans.textContent = "---";
         console.error(e);
@@ -2385,7 +2420,8 @@ function renderTargetList() {
 
     // Filter Logic
     let matches = allItemsList.filter(item => {
-        const matchText = item.name.toLowerCase().includes(search);
+        const matchText = item.name.toLowerCase().includes(search)
+            || (item.displayName || '').toLowerCase().includes(search);
 
         let matchCat = (activeCat === 'All');
         if (!matchCat) {
@@ -2401,8 +2437,8 @@ function renderTargetList() {
 
     // Sort: StartsWith > Alphabetical
     matches.sort((a, b) => {
-        const aStarts = a.name.toLowerCase().startsWith(search);
-        const bStarts = b.name.toLowerCase().startsWith(search);
+        const aStarts = a.name.toLowerCase().startsWith(search) || (a.displayName || '').toLowerCase().startsWith(search);
+        const bStarts = b.name.toLowerCase().startsWith(search) || (b.displayName || '').toLowerCase().startsWith(search);
         if (aStarts && !bStarts) return -1;
         if (!aStarts && bStarts) return 1;
         return a.name.localeCompare(b.name);
@@ -2431,7 +2467,7 @@ function renderTargetList() {
         card.setAttribute('data-cat', primaryCat || 'Other');
 
         card.innerHTML = `
-            <strong>${renderIcon(item.name)} ${item.name}</strong>
+            <strong>${renderItem(item.name)}</strong>
             <span class='item-cat'>${displayCat}</span>
         `;
         card.onclick = () => selectTarget(item.name);
@@ -2454,7 +2490,7 @@ function selectTarget(itemName) {
     document.getElementById('targetItemInput').value = itemName;
 
     // 2. Update Button UI
-    document.getElementById('target-btn-text').innerHTML = `${renderIcon(itemName)} ${itemName}`;
+    document.getElementById('target-btn-text').innerHTML = renderItem(itemName);
 
     // 3. Close & Calc
     closeModal('target-modal');

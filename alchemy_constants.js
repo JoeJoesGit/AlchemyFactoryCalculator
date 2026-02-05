@@ -53,13 +53,13 @@ function getSmartLabel(currentRate, maxSpeed) {
     const percent = (ratio * 100).toFixed(1) + "%";
 
     if (match) {
-        const fracStr = (match.n === 1 && match.d === 1) ? "Full Belt" : `${match.n}/${match.d} Belt`;
+        const fracStr = (match.n === 1 && match.d === 1) ? I18n.t("Full Belt") : I18n.t("{n}/{d} Belt", {n: match.n, d: match.d});
         const isApprox = Math.abs((match.n / match.d) - ratio) > 0.000001;
         const prefix = isApprox ? "~" : "";
         return `${prefix}${fracStr}, ${percent}`;
     }
 
-    return `${percent} Load`;
+    return I18n.t("{percent} Load", {percent: percent});
 }
 
 // --- ITEM ID REGISTRY (Auto-Generated 2026-01-10) ---

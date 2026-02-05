@@ -75,6 +75,18 @@ function getDepthColor(item, depth) {
     return colors[depth % colors.length];
 }
 
+/* ==========================================================================
+   SECTION: UI HELPER FUNCTIONS
+   ========================================================================== */
+function tooltipRow(labelKey, value, style) {
+    const styleAttr = style ? ` style="${style}"` : '';
+    return `<div class="tooltip-row"><span>${I18n.t(labelKey)}:</span> <span class="tooltip-val"${styleAttr}>${value}</span></div>`;
+}
+
+function renderItem(name) {
+    return `${renderIcon(name)} ${I18n.t(name)}`;
+}
+
 function getItemTooltipHtml(item) {
     const def = DB.items[item] || {};
     let rows = "";
@@ -82,37 +94,36 @@ function getItemTooltipHtml(item) {
     // Category
     if (def.category) {
         const cat = Array.isArray(def.category) ? def.category.join(", ") : def.category;
-        rows += `<div class="tooltip-row"><span>Category:</span> <span class="tooltip-val">${cat}</span></div>`;
+        rows += tooltipRow("Category", cat);
     }
 
     // Heat
     if (def.heat) {
-        rows += `<div class="tooltip-row"><span>Heat Value:</span> <span class="tooltip-val" style="color:var(--fuel)">${def.heat} P</span></div>`;
+        rows += tooltipRow("Heat Value", `${def.heat} P`, "color:var(--fuel)");
     }
 
     // Nutrient
     if (def.nutrientValue) {
-        rows += `<div class="tooltip-row"><span>Nutrient Val:</span> <span class="tooltip-val" style="color:var(--bio)">${def.nutrientValue} V</span></div>`;
+        rows += tooltipRow("Nutrient Val", `${def.nutrientValue} V`, "color:var(--bio)");
     }
     if (def.nutrientCost) {
-        // Calculate max Nutrient Cost if possible? No, static data
-        rows += `<div class="tooltip-row"><span>Nutrient Cost:</span> <span class="tooltip-val" style="color:var(--bio)">${def.nutrientCost} V</span></div>`;
+        rows += tooltipRow("Nutrient Cost", `${def.nutrientCost} V`, "color:var(--bio)");
     }
     if (def.maxFertility) {
-        rows += `<div class="tooltip-row"><span>Max Fertility:</span> <span class="tooltip-val" style="color:var(--bio)">${def.maxFertility}</span></div>`;
+        rows += tooltipRow("Max Fertility", def.maxFertility, "color:var(--bio)");
     }
 
     // Prices
     if (def.buyPrice) {
-        rows += `<div class="tooltip-row"><span>Buy Price:</span> <span class="tooltip-val">${formatVal(def.buyPrice)}g</span></div>`;
+        rows += tooltipRow("Buy Price", `${formatVal(def.buyPrice)}g`);
     }
     if (def.sellPrice) {
-        rows += `<div class="tooltip-row"><span>Sell Price:</span> <span class="tooltip-val">${formatVal(def.sellPrice)}g</span></div>`;
+        rows += tooltipRow("Sell Price", `${formatVal(def.sellPrice)}g`);
     }
 
     return `
         <div class="tooltip-box">
-            <div class="tooltip-header">Click to open new chain</div>
+            <div class="tooltip-header">${I18n.t("Click to open new chain")}</div>
             ${rows}
         </div>
     `;
@@ -183,7 +194,7 @@ function calculate() {
         // --- UPDATE SMART LABEL ---
         if (typeof getSmartLabel === 'function') {
             const lbl = getSmartLabel(targetRate, params.beltSpeed);
-            document.getElementById('rateLabel').innerText = `Rate (Items/Min): ${lbl}`;
+            document.getElementById('rateLabel').innerText = I18n.t("Rate (Items/Min): {label}", {label: lbl});
         }
 
         // --- EMPTY STATE HANDLING ---
@@ -194,8 +205,8 @@ function calculate() {
 
             document.getElementById('tree').innerHTML = `
                 <div style="text-align:center; padding:40px; color:#666; font-style:italic;">
-                    <h3>Select an Item to get started...</h3>
-                    <p>Use the search box above to choose a production target.</p>
+                    <h3>${I18n.t("Select an Item to get started...")}</h3>
+                    <p>${I18n.t("Use the search box above to choose a production target.")}</p>
                 </div>`;
 
             document.getElementById('construction-list').innerHTML = '';
@@ -454,10 +465,10 @@ function calculatePass(p, isGhost) {
             errDiv.className = 'node error-node';
             errDiv.innerHTML = `
                 <div class="node-content" style="border-left: 4px solid red; background: rgba(255,0,0,0.1);">
-                    <span class="qty">ERROR</span>
+                    <span class="qty">${I18n.t("ERROR")}</span>
                     <strong>${item}</strong>
-                    <div class="details" style="color:red;">Wrapper Recursion Limit Hit (>100)</div>
-                    <div class="details">Check for infinite loops in recipes.</div>
+                    <div class="details" style="color:red;">${I18n.t("Wrapper Recursion Limit Hit (>100)")}</div>
+                    <div class="details">${I18n.t("Check for infinite loops in recipes.")}</div>
                 </div>`;
             return errDiv;
         }
@@ -519,8 +530,8 @@ function calculatePass(p, isGhost) {
         let machinesNeeded = 0; let hasChildren = false;
 
         let isFuel = (item === p.selectedFuel); let isFert = (item === p.selectedFert);
-        if (isFuel) { outputTag = `<span class="output-tag">Output: ${formatVal((rate * (fuelDef.heat || 10) * p.fuelMult) / 60)} P/s</span>`; }
-        else if (isFert) { outputTag = `<span class="output-tag">Output: ${formatVal((rate * fertDef.nutrientValue * p.fertMult) / 60)} V/s</span>`; }
+        if (isFuel) { outputTag = `<span class="output-tag">${I18n.t("Output:")} ${formatVal((rate * (fuelDef.heat || 10) * p.fuelMult) / 60)} P/s</span>`; }
+        else if (isFert) { outputTag = `<span class="output-tag">${I18n.t("Output:")} ${formatVal((rate * fertDef.nutrientValue * p.fertMult) / 60)} V/s</span>`; }
 
         // --- EXTERNAL INPUT OVERRIDE LOGIC ---
         // If this specific row is marked as External, stop recursion and aggregate.
@@ -543,7 +554,7 @@ function calculatePass(p, isGhost) {
             const isRecycling = activeRecyclers[item];
             const btnClass = isRecycling ? "btn-recycle-on" : "btn-recycle-off";
             const iconClass = isRecycling ? "recycle-icon-white" : "recycle-icon-green";
-            const btnText = isRecycling ? "Recycling" : "Not Recycling";
+            const btnText = isRecycling ? I18n.t("Recycling") : I18n.t("Not Recycling");
             // Just the button, no wrapper div yet
             recycleBtnHtml = `<button class="split-btn ${btnClass}" onclick="toggleRecycle('${item}'); event.stopPropagation();"><span class="${iconClass}">♻</span> ${btnText}</button>`;
         }
@@ -563,10 +574,10 @@ function calculatePass(p, isGhost) {
                 ? `<svg viewBox="0 0 24 24"><path d="m 9.0471027,6.8244883 v 2.667737 H 2.4899735 a 2.4979603,2.4979603 0 0 0 -2.50185681,2.5018577 2.4979603,2.4979603 0 0 0 2.50185681,2.492099 h 6.5571292 v 2.669689 L 18.072914,11.99018 Z M 12.026132,-2.7091033e-8 C 8.8467133,-2.7091033e-8 5.7920934,1.2627157 3.5439055,3.5109039 a 1.4987782,1.4987782 0 0 0 0,2.1168687 1.4987782,1.4987782 0 0 0 2.116869,0 c 1.6868507,-1.6868515 3.9797882,-2.633178 6.3653575,-2.633178 4.984242,0 8.991159,4.0142933 8.991159,8.9985354 0,4.984242 -4.006917,8.99116 -8.991159,8.99116 -2.3855693,0 -4.6785068,-0.946327 -6.3653575,-2.633178 a 1.4987782,1.4987782 0 0 0 -2.116869,0 1.4987782,1.4987782 0 0 0 0,2.116868 c 2.2481879,2.248188 5.3028078,3.510905 8.4822265,3.510905 6.604241,0 11.985754,-5.381513 11.985754,-11.985755 C 24.011885,5.388888 18.630373,-2.7091033e-8 12.026132,-2.7091033e-8 Z" fill="currentColor"></path></svg>`
                 : `<svg viewBox="0 0 24 24"><path d="m 10.513672,0.00390625 -0.0625,9.66210935 H 7.1230469 l 4.8183591,8.3457034 4.81836,-8.3457034 h -3.308594 l 0.04102,-6.3652343 c 1.819848,0.3134317 3.553388,1.0162788 4.876953,2.3398437 3.527281,3.5272817 3.527282,9.201233 0,12.728516 -3.527281,3.527281 -9.2012342,3.527281 -12.728516,0 -3.5272818,-3.527282 -3.5272818,-9.2012343 0,-12.728516 L 6.7011719,4.5800781 4.5800781,2.4589844 3.5195313,3.5195313 c -4.6737286,4.6737283 -4.6737286,12.2969747 0,16.9707027 4.6737285,4.673729 12.2969757,4.673729 16.9707027,0 4.673728,-4.673729 4.673729,-12.2969745 0,-16.9707027 C 18.240206,1.2695026 15.185928,0.00390625 12.003906,0.00390625 Z" fill="currentColor"></path></svg>`;
 
-            const tooltipHeader = isExternal ? "Status: External Input" : "Status: Internal Production";
+            const tooltipHeader = isExternal ? I18n.t("Status: External Input") : I18n.t("Status: Internal Production");
             const tooltipDesc = isExternal
-                ? "This item is currently supplied externally (imported). Click to switch to Internal Production."
-                : "This item is currently produced within this chain. Click to switch to External Input (stop producing recursively).";
+                ? I18n.t("This item is currently supplied externally (imported). Click to switch to Internal Production.")
+                : I18n.t("This item is currently produced within this chain. Click to switch to External Input (stop producing recursively).");
 
             extBtnHtml = `
                 <button class="${btnClass}" onclick="toggleExternal('${pathKey}'); event.stopPropagation();">
@@ -595,7 +606,7 @@ function calculatePass(p, isGhost) {
                         <span class="row-id">${myRowID})</span>
                         <span class="qty">${formatVal(netRate)}/m</span>
                         <strong>${item}</strong>
-                        <span class="details" style="color:#2196f3; margin-left:10px;">(External Input)</span>
+                        <span class="details" style="color:#2196f3; margin-left:10px;">${I18n.t("(External Input)")}</span>
                         <div class="push-right" style="display:flex; align-items:center;">${recycleBtnHtml}${extBtnHtml}</div>
                     </div>
                 `;
@@ -618,7 +629,7 @@ function calculatePass(p, isGhost) {
                         // Use formatCurrency for cost tag
                         costTag = `<span class="cost-tag">${formatCurrency(c)}/m</span>`;
                     }
-                    detailsTag = `<span class="details">(Raw Input)</span>`;
+                    detailsTag = `<span class="details">${I18n.t("(Raw Input)")}</span>`;
                 }
             } else {
                 hasChildren = true;
@@ -663,14 +674,14 @@ function calculatePass(p, isGhost) {
                     // Cap based on Belt Speed
                     if (maxItemsPerMin > p.beltSpeed) {
                         effectiveBatchesPerMin = p.beltSpeed / batchYield;
-                        capReason = `Belt Limit (${p.beltSpeed}/m)`;
+                        capReason = I18n.t("Belt Limit ({speed}/m)", {speed: p.beltSpeed});
                     }
                 } else {
                     // Universal Pipe Cap for Liquids
                     const currentOutput = maxBatchesPerMin * batchYield;
                     if (currentOutput > PIPE_CAP_PER_MIN) {
                         effectiveBatchesPerMin = PIPE_CAP_PER_MIN / batchYield;
-                        capReason = `Pipe Output Limit (${(PIPE_CAP_PER_MIN / 60).toFixed(0)}/s)`;
+                        capReason = I18n.t("Pipe Output Limit ({speed}/s)", {speed: (PIPE_CAP_PER_MIN / 60).toFixed(0)});
                     }
                 }
 
@@ -710,7 +721,7 @@ function calculatePass(p, isGhost) {
                     }
 
                     if (!effectiveGhost) {
-                        bioTag = `<span class="bio-tag">Nutr: ${formatVal(netRate * itemDef.nutrientCost / 60)} V/s, Needs ${(netRate * itemDef.nutrientCost / grossFertVal).toFixed(1)}/m ${p.selectedFert}</span>`;
+                        bioTag = `<span class="bio-tag">${I18n.t("Nutr:")} ${formatVal(netRate * itemDef.nutrientCost / 60)} V/s, ${I18n.t("Needs")} ${(netRate * itemDef.nutrientCost / grossFertVal).toFixed(1)}/m ${I18n.t(p.selectedFert)}</span>`;
                     }
                 }
 
@@ -771,48 +782,45 @@ function calculatePass(p, isGhost) {
                     }
 
                     if (!effectiveGhost) {
-                        heatTag = `<span class="heat-tag">Heat: ${totalHeatPs.toFixed(1)} P/s, Needs ${((totalHeatPs * 60) / grossFuelEnergy).toFixed(1)}/m ${p.selectedFuel}</span>`;
+                        heatTag = `<span class="heat-tag">${I18n.t("Heat:")} ${totalHeatPs.toFixed(1)} P/s, ${I18n.t("Needs")} ${((totalHeatPs * 60) / grossFuelEnergy).toFixed(1)}/m ${I18n.t(p.selectedFuel)}</span>`;
                     }
                 }
 
                 if (!effectiveGhost) {
-                    let inputsStr = Object.keys(recipe.inputs).map(k => `${recipe.inputs[k]} ${k}`).join(', ');
-                    let outputsStr = Object.keys(recipe.outputs).map(k => `${recipe.outputs[k]} ${k}`).join(', ');
+                    let inputsStr = Object.keys(recipe.inputs).map(k => `${recipe.inputs[k]} ${I18n.t(k)}`).join(', ');
+                    let outputsStr = Object.keys(recipe.outputs).map(k => `${recipe.outputs[k]} ${I18n.t(k)}`).join(', ');
                     let cycleTime = recipe.baseTime / p.speedMult;
                     let throughput = effectiveBatchesPerMin * batchYield;
 
-                    let alchemyLine = "";
-                    if (recipe.machine === "Extractor" || recipe.machine === "Alembic" || recipe.machine === "Advanced Alembic") {
-                        alchemyLine = `\nAlchemy Mult: ${p.alchemyMult.toFixed(2)}x`;
-                    }
+                    const hasAlchemy = (recipe.machine === "Extractor" || recipe.machine === "Alembic" || recipe.machine === "Advanced Alembic");
 
                     let tooltipHtml = `
                         <div class="tooltip-box">
-                            <div class="tooltip-header">${recipe.machine} Stats</div>
-                            <div class="tooltip-row"><span>Recipe:</span> <span class="tooltip-val">${inputsStr} &rarr; ${outputsStr}</span></div>
-                            <div class="tooltip-row"><span>Base Time:</span> <span class="tooltip-val">${recipe.baseTime}s</span></div>
-                             <div class="tooltip-row"><span>Speed Mult:</span> <span class="tooltip-val">${p.speedMult.toFixed(2)}x</span></div>
-                             <div class="tooltip-row"><span>Cycle Time:</span> <span class="tooltip-val">${cycleTime.toFixed(2)}s</span></div>
-                             ${alchemyLine ? `<div class="tooltip-row"><span>Alchemy Mult:</span> <span class="tooltip-val">${p.alchemyMult.toFixed(2)}x</span></div>` : ''}
-                             <div class="tooltip-row"><span>Throughput:</span> <span class="tooltip-val">${throughput.toFixed(2)} /m/mach</span></div>
+                            <div class="tooltip-header">${I18n.t("{machine} Stats", {machine: I18n.t(recipe.machine)})}</div>
+                            ${tooltipRow("Recipe", `${inputsStr} &rarr; ${outputsStr}`)}
+                            ${tooltipRow("Base Time", `${recipe.baseTime}s`)}
+                            ${tooltipRow("Speed Mult", `${p.speedMult.toFixed(2)}x`)}
+                            ${tooltipRow("Cycle Time", `${cycleTime.toFixed(2)}s`)}
+                            ${hasAlchemy ? tooltipRow("Alchemy Mult", `${p.alchemyMult.toFixed(2)}x`) : ''}
+                            ${tooltipRow("Throughput", `${throughput.toFixed(2)} /m/mach`)}
                         </div>`;
 
                     /* capTag declared above */
                     let capWarningIcon = "";
                     if (capReason) {
                         // Keep simple title for icon warning or convert? Title is safer for small icon.
-                        capWarningIcon = `<span class="cap-warning" title="Capped by ${capReason}">&#9888;</span>`;
+                        capWarningIcon = `<span class="cap-warning" title="${I18n.t("Capped by {reason}", {reason: capReason})}">&#9888;</span>`;
                     }
 
                     if (p.showMax) {
                         const maxOutput = Math.ceil(machinesNeeded) * throughput;
-                        capTag = `<span class="max-cap-tag">(Max: ${formatVal(maxOutput)}/m)</span>`;
+                        capTag = `<span class="max-cap-tag">(${I18n.t("Max:")} ${formatVal(maxOutput)}/m)</span>`;
                     }
                     const machNameForAttr = recipe.machine.replace(/'/g, "");
                     const itemNameForAttr = item.replace(/'/g, "");
                     const machineName = recipe.machine;
-                    const plural = Math.ceil(machinesNeeded) === 1 ? '' : 's';
-                    machineTag = `<span class="machine-tag" onmouseover="highlightMachine('${machineName}')" onmouseout="removeHighlight()">${Math.ceil(machinesNeeded)} ${machineName}${plural}${tooltipHtml}</span>${capWarningIcon}`;
+                    const plural = (I18n.getLang() === 'en' && Math.ceil(machinesNeeded) !== 1) ? 's' : '';
+                    machineTag = `<span class="machine-tag" onmouseover="highlightMachine('${machineName}')" onmouseout="removeHighlight()">${Math.ceil(machinesNeeded)} ${I18n.t(machineName)}${plural}${tooltipHtml}</span>${capWarningIcon}`;
 
                     // Add ExtTag to normal nodes too - MOVED to Action Buttons
                     // outputTag += extTag;
@@ -821,7 +829,7 @@ function calculatePass(p, isGhost) {
                     // ...getRecipesFor(item);
                     const alts = getRecipesFor(item);
                     if (alts.length > 1) {
-                        swapBtn = `<button class="swap-btn" onclick="openRecipeModal('${item}', this.parentElement)" title="Swap Recipe">🔄</button>`;
+                        swapBtn = `<button class="swap-btn" onclick="openRecipeModal('${item}', this.parentElement)" title="${I18n.t("Swap Recipe")}">🔄</button>`;
                     }
                 }
 
@@ -858,7 +866,7 @@ function calculatePass(p, isGhost) {
             <span class="row-id" onclick="toggleNode(this)">${myRowID})</span>
             <span class="qty">${formatVal(rate)}/m</span>
             <span class="item-link" onclick="openDrillDown('${item}', ${rate})">
-                ${renderIcon(item)} <strong>${item}</strong>
+                <strong>${renderItem(item)}</strong>
                 ${getItemTooltipHtml(item)}
             </span>
             ${swapBtn}
@@ -895,10 +903,10 @@ function calculatePass(p, isGhost) {
     if (p.targetItem) {
         const root = buildNode(p.targetItem, primaryRenderRate, false, [], false, false, 0);
         if (!isGhost) {
-            let label = `Primary Production Chain <span class="header-details">(${renderIcon(p.targetItem)} ${formatVal(primaryRenderRate)}/m ${p.targetItem})</span>`;
-            if (absorbedFuel && absorbedFert) { label += ` <span style="font-size:0.8em; color:#aaa; font-style:italic;">(Includes Internal Fuel & Fert)</span>`; }
-            else if (absorbedFuel) { label += ` <span style="font-size:0.8em; color:#aaa; font-style:italic;">(Includes Internal Fuel)</span>`; }
-            else if (absorbedFert) { label += ` <span style="font-size:0.8em; color:#aaa; font-style:italic;">(Includes Internal Fert)</span>`; }
+            let label = `${I18n.t("Primary Production Chain")} <span class="header-details">(${renderItem(p.targetItem)} ${formatVal(primaryRenderRate)}/m)</span>`;
+            if (absorbedFuel && absorbedFert) { label += ` <span style="font-size:0.8em; color:#aaa; font-style:italic;">${I18n.t("(Includes Internal Fuel & Fert)")}</span>`; }
+            else if (absorbedFuel) { label += ` <span style="font-size:0.8em; color:#aaa; font-style:italic;">${I18n.t("(Includes Internal Fuel)")}</span>`; }
+            else if (absorbedFert) { label += ` <span style="font-size:0.8em; color:#aaa; font-style:italic;">${I18n.t("(Includes Internal Fert)")}</span>`; }
 
             const sectionContent = document.createElement('div');
             sectionContent.appendChild(root);
@@ -911,9 +919,9 @@ function calculatePass(p, isGhost) {
     if (!isGhost) {
         if (p.selfFert && stableFertDemand > 0) {
             const grossFertNeeded = stableFertDemand;
-            const title = `Internal Nutrient Module <span class="header-details">(${renderIcon(p.selectedFert)} ${formatVal(grossFertNeeded)}/m ${p.selectedFert})</span>`;
+            const title = `${I18n.t("Internal Nutrient Module")} <span class="header-details">(${renderItem(p.selectedFert)} ${formatVal(grossFertNeeded)}/m)</span>`;
             if (absorbedFert) {
-                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Nutrient Source: <strong>${p.selectedFert}</strong> (Supplied by Main Output)<br>Total Required: ${grossFertNeeded.toFixed(1)}/m</div>`;
+                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">${I18n.t("Internal Nutrient Source:")} <strong>${I18n.t(p.selectedFert)}</strong> ${I18n.t("(Supplied by Main Output)")}<br>${I18n.t("Total Required:")} ${grossFertNeeded.toFixed(1)}/m</div>`;
                 treeContainer.appendChild(createCollapsibleSection(title, note, 'section-internal-fert'));
             } else {
                 const moduleRoot = buildNode(p.selectedFert, grossFertNeeded, true, []);
@@ -925,9 +933,9 @@ function calculatePass(p, isGhost) {
 
         if (p.selfFeed && stableFuelDemand > 0) {
             const grossFuelNeeded = stableFuelDemand;
-            const title = `Internal Heat Module <span class="header-details">(${renderIcon(p.selectedFuel)} ${formatVal(grossFuelNeeded)}/m ${p.selectedFuel})</span>`;
+            const title = `${I18n.t("Internal Heat Module")} <span class="header-details">(${renderItem(p.selectedFuel)} ${formatVal(grossFuelNeeded)}/m)</span>`;
             if (absorbedFuel) {
-                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">Internal Fuel Source: <strong>${p.selectedFuel}</strong> (Supplied by Main Output)<br>Total Required: ${grossFuelNeeded.toFixed(1)}/m</div>`;
+                const note = document.createElement('div'); note.innerHTML = `<div class="node" style="margin-top:20px; color:#aaa; font-style:italic;">${I18n.t("Internal Fuel Source:")} <strong>${I18n.t(p.selectedFuel)}</strong> ${I18n.t("(Supplied by Main Output)")}<br>${I18n.t("Total Required:")} ${grossFuelNeeded.toFixed(1)}/m</div>`;
                 treeContainer.appendChild(createCollapsibleSection(title, note, 'section-internal-heat'));
             } else {
                 const moduleRoot = buildNode(p.selectedFuel, grossFuelNeeded, true, []);
@@ -950,7 +958,7 @@ function calculatePass(p, isGhost) {
         if (globalCostPerMin > 0) {
             extHTML += `
                 <div class="ext-grid-val" style="color:var(--gold)">${formatCurrency(globalCostPerMin)}/m</div>
-                <div class="ext-grid-item">Raw Material Cost</div>
+                <div class="ext-grid-item">${I18n.t("Raw Material Cost")}</div>
             `;
         }
 
@@ -959,10 +967,10 @@ function calculatePass(p, isGhost) {
             extHTML += `
                 <div class="ext-grid-val" style="color:var(--fuel)">${formatVal(globalFuelDemandItems)}/m</div>
                 <div class="ext-grid-item" style="flex-direction:row; align-items:center; justify-content:flex-start;">
-                    ${renderIcon(p.selectedFuel)} 
+                    ${renderIcon(p.selectedFuel)}
                     <div style="margin-left:6px; display:flex; flex-direction:column;">
-                        ${p.selectedFuel}
-                        <div class="ext-grid-note">(Fuel)</div>
+                        ${I18n.t(p.selectedFuel)}
+                        <div class="ext-grid-note">${I18n.t("(Fuel)")}</div>
                     </div>
                 </div>
              `;
@@ -971,13 +979,13 @@ function calculatePass(p, isGhost) {
         // 3. Fertilizer
         if (!p.selfFert && globalFertDemandItems > 0) {
             let needed = globalFertDemandItems;
-            let label = "(Fertilizer)";
+            let label = I18n.t("(Fertilizer)");
             if (activeRecyclers[p.selectedFert]) {
                 const avail = stableByproducts[p.selectedFert] || 0;
                 const recycled = Math.min(needed, avail);
                 needed -= recycled;
                 if (recycled > 0) {
-                    label = `(Fertilizer, ${formatVal(recycled)} recycled)`;
+                    label = I18n.t("(Fertilizer, {amount} recycled)", {amount: formatVal(recycled)});
                     stableByproducts[p.selectedFert] -= recycled;
                 }
             }
@@ -985,9 +993,9 @@ function calculatePass(p, isGhost) {
                 extHTML += `
                     <div class="ext-grid-val" style="color:var(--bio)">${formatVal(needed)}/m</div>
                     <div class="ext-grid-item" style="flex-direction:row; align-items:center; justify-content:flex-start;">
-                        ${renderIcon(p.selectedFert)} 
+                        ${renderIcon(p.selectedFert)}
                         <div style="margin-left:6px; display:flex; flex-direction:column;">
-                            ${p.selectedFert}
+                            ${I18n.t(p.selectedFert)}
                             <div class="ext-grid-note">${label}</div>
                         </div>
                     </div>
@@ -1002,7 +1010,7 @@ function calculatePass(p, isGhost) {
             extHTML += `
                 <div class="ext-grid-val" style="color:#2196f3">${formatVal(qty)}/m</div>
                 <div class="ext-grid-item" style="flex-direction:row; align-items:center; justify-content:flex-start;">
-                    ${renderIcon(item)} <span style="margin-left:6px;">${item}</span>
+                    <span style="margin-left:6px;">${renderItem(item)}</span>
                 </div>
              `;
         });
@@ -1011,9 +1019,9 @@ function calculatePass(p, isGhost) {
 
         extDiv.innerHTML = extHTML;
         if (reqContainer) {
-            reqContainer.appendChild(createCollapsibleSection("External Inputs", extDiv, 'section-external-inputs'));
+            reqContainer.appendChild(createCollapsibleSection(I18n.t("External Inputs"), extDiv, 'section-external-inputs'));
         } else {
-            treeContainer.appendChild(createCollapsibleSection("External Inputs", extDiv, 'section-external-inputs'));
+            treeContainer.appendChild(createCollapsibleSection(I18n.t("External Inputs"), extDiv, 'section-external-inputs'));
         }
 
         // --- BYPRODUCTS LOGIC ---
@@ -1034,10 +1042,10 @@ function calculatePass(p, isGhost) {
                 const masterIconClass = allOn ? "recycle-icon-white" : "recycle-icon-green";
 
                 // Toggle Button (Matches styles of Item rows)
-                const masterToggle = `<button class="split-btn ${masterBtnClass} btn-recycle-icon-only" onclick="toggleRecycleAll(); event.stopPropagation();" title="Toggle Recycling For All Visible Byproducts"><span class="${masterIconClass} recycle-icon-only">♻</span></button>`;
+                const masterToggle = `<button class="split-btn ${masterBtnClass} btn-recycle-icon-only" onclick="toggleRecycleAll(); event.stopPropagation();" title="${I18n.t("Toggle Recycling For All Visible Byproducts")}"><span class="${masterIconClass} recycle-icon-only">♻</span></button>`;
 
                 // Label (Matches Style)
-                const masterLabel = `<span style="font-weight:bold; margin-left:8px;">Recycle All</span>`;
+                const masterLabel = `<span style="font-weight:bold; margin-left:8px;">${I18n.t("Recycle All")}</span>`;
 
                 bypHTML += `<div class="node-content bg-transparent" style="display:flex; align-items:center; border-bottom:1px solid #444; margin-bottom:4px; padding-bottom:4px;">${masterToggle}${masterLabel}</div>`;
             }
@@ -1052,19 +1060,19 @@ function calculatePass(p, isGhost) {
                 const btnClass = isRecycling ? "btn-recycle-on" : "btn-recycle-off";
                 const iconClass = isRecycling ? "recycle-icon-white" : "recycle-icon-green";
                 // Icon-only button for byproducts list - Fixed Size
-                const toggleBtn = `<button class="split-btn ${btnClass} btn-recycle-icon-only" onclick="toggleRecycle('${item}'); event.stopPropagation();" title="Toggle Recycling"><span class="${iconClass} recycle-icon-only">♻</span></button>`;
+                const toggleBtn = `<button class="split-btn ${btnClass} btn-recycle-icon-only" onclick="toggleRecycle('${item}'); event.stopPropagation();" title="${I18n.t("Toggle Recycling")}"><span class="${iconClass} recycle-icon-only">♻</span></button>`;
 
-                bypHTML += `<div class="node-content bg-transparent" style="display:flex; align-items:center;">${toggleBtn}<span class="qty" style="color:var(--byproduct)">${formatVal(remaining)}/m</span>${renderIcon(item)} <strong>${item}</strong>${note}</div>`;
+                bypHTML += `<div class="node-content bg-transparent" style="display:flex; align-items:center;">${toggleBtn}<span class="qty" style="color:var(--byproduct)">${formatVal(remaining)}/m</span><strong>${renderItem(item)}</strong>${note}</div>`;
             });
         } else {
-            bypHTML = `<div class="node-content"><span class="details" style="font-style:italic">None</span></div>`;
+            bypHTML = `<div class="node-content"><span class="details" style="font-style:italic">${I18n.t("None")}</span></div>`;
         }
 
         bypDiv.innerHTML = bypHTML;
         if (reqContainer) {
-            reqContainer.appendChild(createCollapsibleSection("Byproducts", bypDiv, 'section-byproducts'));
+            reqContainer.appendChild(createCollapsibleSection(I18n.t("Byproducts"), bypDiv, 'section-byproducts'));
         } else {
-            treeContainer.appendChild(createCollapsibleSection("Byproducts", bypDiv, 'section-byproducts'));
+            treeContainer.appendChild(createCollapsibleSection(I18n.t("Byproducts"), bypDiv, 'section-byproducts'));
         }
 
         // --- FLATTEN AGGREGATION FOR UI ---
